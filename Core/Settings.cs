@@ -10,11 +10,6 @@ internal sealed class Settings : JsonModSettings
 	[Description("IMFI_CAMPFIRES_DESC")]
 	public bool campfires = true;
 
-	[Name("IMFI_CAMPFIRE_ZONES", Localize = true)]
-	[Description("IMFI_CAMPFIRE_ZONES_DESC")]
-	[Choice(new string[] { "IMFI_MORE_0", "IMFI_MORE_5", "IMFI_MORE_10", "IMFI_MORE_15", "IMFI_MORE_20", "IMFI_MORE_25", "IMFI_MORE_30" }, Localize = true)]
-	public int campfireZones;
-
 	[Name("IMFI_FIREPLACES", Localize = true)]
 	[Description("IMFI_FIREPLACES_DESC")]
 	public bool fireplaces = true;
@@ -23,14 +18,25 @@ internal sealed class Settings : JsonModSettings
 	[Description("IMFI_STOVES_DESC")]
 	public bool stoves = true;
 
+	[Name("IMFI_FORGES", Localize = true)]
+	[Description("IMFI_FORGES_DESC")]
+	public bool forges = true;
+
+	[Section("IMFI_SECTION_ZONES", Localize = true)]
+	[Name("IMFI_CAMPFIRE_ZONES", Localize = true)]
+	[Description("IMFI_CAMPFIRE_ZONES_DESC")]
+	[Choice(new string[] { "IMFI_MORE_0", "IMFI_MORE_5", "IMFI_MORE_10", "IMFI_MORE_15", "IMFI_MORE_20", "IMFI_MORE_25", "IMFI_MORE_30" }, Localize = true)]
+	public int campfireZones;
+
 	[Name("IMFI_STOVE_ZONES", Localize = true)]
 	[Description("IMFI_STOVE_ZONES_DESC")]
 	[Choice(new string[] { "IMFI_MORE_0", "IMFI_MORE_5", "IMFI_MORE_10", "IMFI_MORE_15", "IMFI_MORE_20", "IMFI_MORE_25", "IMFI_MORE_30" }, Localize = true)]
 	public int stoveZones;
 
-	[Name("IMFI_FORGES", Localize = true)]
-	[Description("IMFI_FORGES_DESC")]
-	public bool forges = true;
+	[Name("IMFI_FUNNEL_SIZE", Localize = true)]
+	[Description("IMFI_FUNNEL_SIZE_DESC")]
+	[Choice(new string[] { "IMFI_MORE_0", "IMFI_MORE_10", "IMFI_MORE_20", "IMFI_MORE_30", "IMFI_MORE_40", "IMFI_MORE_50" }, Localize = true)]
+	public int funnelSize = 5;
 
 	[Section("IMFI_SECTION_RULES", Localize = true)]
 	[Name("IMFI_BOOKS", Localize = true)]
@@ -41,30 +47,6 @@ internal sealed class Settings : JsonModSettings
 	[Name("IMFI_MESSAGES", Localize = true)]
 	[Description("IMFI_MESSAGES_DESC")]
 	public bool messages = true;
-
-	[Name("IMFI_FUNNEL_SIZE", Localize = true)]
-	[Description("IMFI_FUNNEL_SIZE_DESC")]
-	[Choice(new string[] { "IMFI_MORE_0", "IMFI_MORE_10", "IMFI_MORE_20", "IMFI_MORE_30", "IMFI_MORE_40", "IMFI_MORE_50" }, Localize = true)]
-	public int funnelSize = 2;
-
-	[Name("IMFI_PULL_SPEED", Localize = true)]
-	[Description("IMFI_PULL_SPEED_DESC")]
-	[Choice(new string[] { "IMFI_FASTER_0", "IMFI_SLOWER_10", "IMFI_SLOWER_20", "IMFI_SLOWER_30", "IMFI_SLOWER_40", "IMFI_SLOWER_50" }, Localize = true)]
-	public int pullAnimation;
-
-	[Name("IMFI_DOOR_CLOSE", Localize = true)]
-	[Description("IMFI_DOOR_CLOSE_DESC")]
-	[Choice(new string[] { "IMFI_SHORTER_30", "IMFI_SHORTER_40", "IMFI_SHORTER_50", "IMFI_SHORTER_60", "IMFI_SHORTER_70" }, Localize = true)]
-	public int doorClose;
-
-	[Name("IMFI_DOOR_TURN", Localize = true)]
-	[Description("IMFI_DOOR_TURN_DESC")]
-	[Choice(new string[]
-	{
-		"IMFI_FASTER_0", "IMFI_SLOWER_10", "IMFI_SLOWER_20", "IMFI_SLOWER_30", "IMFI_SLOWER_40", "IMFI_SLOWER_50", "IMFI_SLOWER_60", "IMFI_SLOWER_70", "IMFI_SLOWER_80", "IMFI_SLOWER_90",
-		"IMFI_SLOWER_100"
-	}, Localize = true)]
-	public int doorTurn;
 
 	[Section("IMFI_SECTION_AUTO", Localize = true)]
 	[Name("IMFI_MODE", Localize = true)]
@@ -85,6 +67,25 @@ internal sealed class Settings : JsonModSettings
 	public KeyCode autoFeedKey = KeyCode.LeftShift;
 
 	[Section("IMFI_SECTION_LOOK", Localize = true)]
+	[Name("IMFI_PULL_SPEED", Localize = true)]
+	[Description("IMFI_PULL_SPEED_DESC")]
+	[Choice(new string[] { "IMFI_FASTER_0", "IMFI_SLOWER_10", "IMFI_SLOWER_20", "IMFI_SLOWER_30", "IMFI_SLOWER_40", "IMFI_SLOWER_50" }, Localize = true)]
+	public int pullAnimation = 3;
+
+	[Name("IMFI_DOOR_CLOSE", Localize = true)]
+	[Description("IMFI_DOOR_CLOSE_DESC")]
+	[Choice(new string[] { "IMFI_SHORTER_30", "IMFI_SHORTER_40", "IMFI_SHORTER_50", "IMFI_SHORTER_60", "IMFI_SHORTER_70" }, Localize = true)]
+	public int doorClose = 1;
+
+	[Name("IMFI_DOOR_TURN", Localize = true)]
+	[Description("IMFI_DOOR_TURN_DESC")]
+	[Choice(new string[]
+	{
+		"IMFI_FASTER_0", "IMFI_SLOWER_10", "IMFI_SLOWER_20", "IMFI_SLOWER_30", "IMFI_SLOWER_40", "IMFI_SLOWER_50", "IMFI_SLOWER_60", "IMFI_SLOWER_70", "IMFI_SLOWER_80", "IMFI_SLOWER_90",
+		"IMFI_SLOWER_100"
+	}, Localize = true)]
+	public int doorTurn = 10;
+
 	[Name("IMFI_HIDE_OUTLINE", Localize = true)]
 	[Description("IMFI_HIDE_OUTLINE_DESC")]
 	[Choice(new string[] { "IMFI_OUTLINE_OFF", "IMFI_OUTLINE_FUEL", "IMFI_OUTLINE_ALL" }, Localize = true)]
@@ -94,11 +95,6 @@ internal sealed class Settings : JsonModSettings
 	[Description("IMFI_OUTLINE_DISTANCE_DESC")]
 	[Slider(1f, 15f, 15, NumberFormat = "{0:0}")]
 	public float outlineDistance = 5f;
-
-	[Section("IMFI_SECTION_TEST", Localize = true)]
-	[Name("IMFI_TEST_NO_CAP", Localize = true)]
-	[Description("IMFI_TEST_NO_CAP_DESC")]
-	public bool testNoBurnCap = true;
 
 	public float CampfireZoneScale => 1f + 0.05f * (float)campfireZones;
 

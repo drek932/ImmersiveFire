@@ -8,7 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>ImmersiveFire</AssemblyName>
     <RootNamespace>ImmersiveFire</RootNamespace>
-    <Version>0.16.5</Version>
+    <Version>1.0.0</Version>
     <!-- dotnet build -c Release -p:Verbose=true : step-by-step log for testing (Verbose.Log calls are compiled in). -->
     <DefineConstants Condition="'$(Verbose)' == 'true'">$(DefineConstants);VERBOSE</DefineConstants>
     <Authors>drek932</Authors>

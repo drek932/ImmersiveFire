@@ -50,10 +50,11 @@ Looks natural
 Settings
 Everything is in Mod Settings → Immersive Fire:
 
-* Fires: campfires, fireplaces, stoves and barrels, forge — each can be turned off; campfire and stove zones can be made bigger.
-* Rules: unread skill books, messages, stove funnel size, pull animation speed, stove door timing.
-* Auto-feed: mode (pull and auto-feed, pull only, auto-feed only), the button instead of "Add fuel", the key for the time choice.
-* Look: highlight near a fire and the distance it is hidden at.
+* Fires — campfires, fireplaces, stoves and barrels, forge: each can be turned off.
+* Zones — how big the campfire and stove zones are, and the funnel in front of a stove door.
+* Rules — unread skill books (ask, never, burn) and the game's messages when a fire can't take fuel.
+* Auto-feed — mode (pull and auto-feed, pull only, auto-feed only), the button instead of "Add fuel" (stoves; campfires optional), the key for the time choice.
+* Animation and look — how fast fuel flies in, stove door timing, and the item highlight near a fire.
 
 Every option has a description in English and Russian, and the texts follow the game's language.
 

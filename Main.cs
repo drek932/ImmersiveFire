@@ -4,7 +4,7 @@ using ImmersiveShared;
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(ImmersiveFire.Main), "ImmersiveFire", "0.16.5", "drek932")]
+[assembly: MelonInfo(typeof(ImmersiveFire.Main), "ImmersiveFire", "1.0.0", "drek932")]
 [assembly: MelonGame("Hinterland", "TheLongDark")]
 
 namespace ImmersiveFire;
@@ -27,8 +27,10 @@ public sealed class Main : MelonMod
 	public override void OnSceneWasInitialized(int buildIndex, string sceneName)
 	{
 		FuelFeeder.Reset();
+#if VERBOSE
 		Calibration.Clear();
 		Spawner.Close();
+#endif
 		FirewoodBins.Reset();
 	}
 
@@ -38,14 +40,15 @@ public sealed class Main : MelonMod
 		{
 			if (!GameManager.IsMainMenuActive() && !(GameManager.GetPlayerManagerComponent() == null))
 			{
-				NoBurnCap.Update();
 				FuelFeeder.Update();
+#if VERBOSE
 				if (Input.GetKeyDown(KeyCode.F6) && !InterfaceManager.IsOverlayActiveImmediate())
 				{
 					Calibration.Toggle();
 				}
 				Calibration.LogHeld();
 				Spawner.Update();
+#endif
 				FireMenu.Update();
 				FirewoodBins.Update();
 			}
@@ -56,6 +59,7 @@ public sealed class Main : MelonMod
 		}
 	}
 
+#if VERBOSE
 	public override void OnGUI()
 	{
 		try
@@ -67,6 +71,7 @@ public sealed class Main : MelonMod
 			Once.Warn("gui", "Spawner menu: " + ex);
 		}
 	}
+#endif
 
 	public override void OnLateUpdate()
 	{

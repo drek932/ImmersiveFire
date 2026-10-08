@@ -1,3 +1,4 @@
+#if VERBOSE
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -365,3 +366,4 @@ internal static class Calibration
 		return text;
 	}
 }
+#endif

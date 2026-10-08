@@ -29,7 +29,7 @@ internal static class FireMenu
 		}
 	}
 
-	private static readonly int[] Thresholds = new int[4] { 15, 30, 60, -5 };
+	private static readonly int[] Thresholds = new int[3] { 15, 30, 60 };
 
 	private const int DefaultThreshold = 30;
 
@@ -59,8 +59,7 @@ internal static class FireMenu
 			0 => "IMFI_AUTO_OFF", 
 			15 => "IMFI_AUTO_15", 
 			30 => "IMFI_AUTO_30", 
-			60 => "IMFI_AUTO_60", 
-			_ => "IMFI_AUTO_TEST", 
+			_ => "IMFI_AUTO_60", 
 		};
 	}
 
@@ -70,8 +69,7 @@ internal static class FireMenu
 		{
 			15 => "IMFI_MIN_15", 
 			30 => "IMFI_MIN_30", 
-			60 => "IMFI_MIN_60", 
-			_ => "IMFI_TEST_5", 
+			_ => "IMFI_MIN_60", 
 		};
 	}
 

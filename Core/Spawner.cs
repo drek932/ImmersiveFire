@@ -1,3 +1,4 @@
+#if VERBOSE
 using System;
 using Il2Cpp;
 using Il2CppTLD.AddressableAssets;
@@ -263,3 +264,4 @@ internal static class Spawner
 		HUDMessage.AddMessage("Поставлено: " + text, 2f, highPriority: false, ignoreOverlayActive: true);
 	}
 }
+#endif

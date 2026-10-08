@@ -118,13 +118,9 @@ internal static class FuelFeeder
 
 	public const int AutoOff = 0;
 
-	public const int AutoTestEvery5 = -5;
-
 	private const float AutoEvery = 0.5f;
 
 	private static readonly Dictionary<string, int> autoModes = new Dictionary<string, int>();
-
-	private static readonly Dictionary<string, float> autoTestLast = new Dictionary<string, float>();
 
 	private static float nextAuto;
 
@@ -223,7 +219,6 @@ internal static class FuelFeeder
 			{
 				autoModes[text] = mode;
 			}
-			autoTestLast.Remove(text);
 			Main.Log.Msg($"Auto-feed of '{fi.gameObject.name}' at {text}: {Describe(mode)}");
 		}
 	}
@@ -232,7 +227,6 @@ internal static class FuelFeeder
 	{
 		return mode switch
 		{
-			-5 => "TEST every 5 min", 
 			0 => "off", 
 			_ => $"below {mode} min left", 
 		};
@@ -261,8 +255,6 @@ internal static class FuelFeeder
 			return;
 		}
 		nextAuto = Time.time + 0.5f;
-		TimeOfDay timeOfDayComponent = GameManager.GetTimeOfDayComponent();
-		float num = ((timeOfDayComponent != null) ? timeOfDayComponent.GetHoursPlayedNotPaused() : 0f);
 		foreach (Watched fire in fires)
 		{
 			try
@@ -281,11 +273,6 @@ internal static class FuelFeeder
 				{
 				case 0:
 					goto end_IL_005e;
-				case -5:
-				{
-					flag = !autoTestLast.TryGetValue(key, out var value2) || num - value2 >= 1f / 12f || num < value2;
-					break;
-				}
 				default:
 					flag = fire.Fire.GetRemainingLifeTimeSeconds() / 60f < (float)value;
 					break;
@@ -314,10 +301,6 @@ internal static class FuelFeeder
 				IL_015d:
 				Pull(fire, gearItem, found);
 				Feed(fire, gearItem);
-				if (value == -5)
-				{
-					autoTestLast[key] = num;
-				}
 				Verbose.Log($"Auto-feed ({Describe(value)}): {gearItem.name} into the {fire.Kind} '{fire.Fi.gameObject.name}', now {fire.Fire.GetRemainingLifeTimeHours():0.00} h left");
 				end_IL_005e:;
 			}
@@ -463,7 +446,6 @@ internal static class FuelFeeder
 	private static void LoadAuto(string sceneSaveName)
 	{
 		autoModes.Clear();
-		autoTestLast.Clear();
 		string text = Data.Load("autofeed_@_" + sceneSaveName);
 		if (string.IsNullOrEmpty(text))
 		{
@@ -476,7 +458,7 @@ internal static class FuelFeeder
 			{
 				foreach (KeyValuePair<string, int> item in dictionary)
 				{
-					autoModes[item.Key] = item.Value;
+					autoModes[item.Key] = ((item.Value < 0) ? 30 : item.Value);
 				}
 			}
 			if (autoModes.Count > 0)
