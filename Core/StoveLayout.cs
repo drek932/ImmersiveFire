@@ -36,7 +36,11 @@ internal sealed class StoveLayout
 
 	public float Lowered;
 
+	public float Bottom = -0.3f;
+
 	public string How;
+
+	private string How2 = "";
 
 	private static readonly Dictionary<IntPtr, StoveLayout> cache = new Dictionary<IntPtr, StoveLayout>();
 
@@ -139,6 +143,7 @@ internal sealed class StoveLayout
 			stoveLayout.MaxX = max2.x;
 			stoveLayout.FrontZ = ((list.Count > 0) ? Math.Min(min2.z, stoveLayout.Door.z) : min2.z);
 			stoveLayout.CenterZ = (min2.z + max2.z) / 2f;
+			stoveLayout.Bottom = Math.Min(-0.3f, min2.y - 0.3f);
 			if (list.Count == 0)
 			{
 				stoveLayout.Open = true;
@@ -163,6 +168,7 @@ internal sealed class StoveLayout
 			stoveLayout.CenterZ = stoveLayout.Door.z + 0.3f;
 			stoveLayout.Lowered = 0.1f * stoveLayout.DoorHalfHeight * 2f;
 			stoveLayout.Door.y -= stoveLayout.Lowered;
+			stoveLayout.How2 = $", every zone down to {stoveLayout.Bottom:0.00} (below the floor)";
 		}
 		string name = transform2.name;
 		if (name.StartsWith("INTERACTIVE_StoveMetalA", StringComparison.OrdinalIgnoreCase))
@@ -173,7 +179,7 @@ internal sealed class StoveLayout
 		{
 			stoveLayout.Scale = 1.05f;
 		}
-		stoveLayout.How = $"front = root {FireZone.V(vector3)}, door {(flag ? "animated" : ((list.Count > 0) ? "not animated" : "none (open hearth)"))} at {FireZone.V(stoveLayout.Door)} size {stoveLayout.DoorHalfWidth * 2f:0.00} x {stoveLayout.DoorHalfHeight * 2f:0.00} m, body ('{transform2.name}'{(flag2 ? ", its furnace only" : "")}) x {stoveLayout.MinX:0.00}..{stoveLayout.MaxX:0.00}, front z {stoveLayout.FrontZ:0.00}, middle z {stoveLayout.CenterZ:0.00}" + ((stoveLayout.Scale != 1f) ? $", zones x{stoveLayout.Scale:0.00}" : "") + ((stoveLayout.ExtraBack > 0f) ? $", {stoveLayout.ExtraBack:P0} further back" : "") + ((stoveLayout.Lowered > 0f) ? $", {stoveLayout.Lowered:0.00} m lower" : "");
+		stoveLayout.How = $"front = root {FireZone.V(vector3)}, door {(flag ? "animated" : ((list.Count > 0) ? "not animated" : "none (open hearth)"))} at {FireZone.V(stoveLayout.Door)} size {stoveLayout.DoorHalfWidth * 2f:0.00} x {stoveLayout.DoorHalfHeight * 2f:0.00} m, body ('{transform2.name}'{(flag2 ? ", its furnace only" : "")}) x {stoveLayout.MinX:0.00}..{stoveLayout.MaxX:0.00}, front z {stoveLayout.FrontZ:0.00}, middle z {stoveLayout.CenterZ:0.00}" + ((stoveLayout.Scale != 1f) ? $", zones x{stoveLayout.Scale:0.00}" : "") + ((stoveLayout.ExtraBack > 0f) ? $", {stoveLayout.ExtraBack:P0} further back" : "") + ((stoveLayout.Lowered > 0f) ? $", {stoveLayout.Lowered:0.00} m lower" : "") + stoveLayout.How2;
 		return stoveLayout;
 	}
 
@@ -181,7 +187,7 @@ internal sealed class StoveLayout
 	{
 		if (!Open)
 		{
-			return FireZone.ScaledBox(Frame, new Vector3(Door.x - DoorHalfWidth, Door.y - DoorHalfHeight, Door.z - 0.33f), new Vector3(Door.x + DoorHalfWidth, Door.y + DoorHalfHeight, Door.z + 0.4f), ZoneScale, "stove door and firebox");
+			return FireZone.ScaledBox(Frame, new Vector3(Door.x - DoorHalfWidth, Furnace ? Bottom : (Door.y - DoorHalfHeight), Door.z - 0.33f), new Vector3(Door.x + DoorHalfWidth, Door.y + DoorHalfHeight, Door.z + 0.4f), ZoneScale, "stove door and firebox");
 		}
 		return FireZone.ScaledBox(Frame, new Vector3(Door.x - DoorHalfWidth, Door.y - DoorHalfHeight, Door.z - 0.12f), new Vector3(Door.x + DoorHalfWidth, Door.y + DoorHalfHeight, Door.z + 0.55f), ZoneScale, "hearth fire");
 	}
@@ -200,8 +206,8 @@ internal sealed class StoveLayout
 		num2 += (num2 - num) * ExtraBack;
 		return new FireZone[2]
 		{
-			FireZone.ScaledBox(Frame, new Vector3(MinX - 1.1f, -0.3f, num), new Vector3(MinX, y, num2), scale, Furnace ? "furnace left side" : "stove left side"),
-			FireZone.ScaledBox(Frame, new Vector3(MaxX, -0.3f, num), new Vector3(MaxX + 1.1f, y, num2), scale, Furnace ? "furnace right side" : "stove right side")
+			FireZone.ScaledBox(Frame, new Vector3(MinX - 1.1f, Furnace ? Bottom : (-0.3f), num), new Vector3(MinX, y, num2), scale, Furnace ? "furnace left side" : "stove left side"),
+			FireZone.ScaledBox(Frame, new Vector3(MaxX, Furnace ? Bottom : (-0.3f), num), new Vector3(MaxX + 1.1f, y, num2), scale, Furnace ? "furnace right side" : "stove right side")
 		};
 	}
 
@@ -214,7 +220,7 @@ internal sealed class StoveLayout
 		float num = FrontZ - 1.6f;
 		float num2 = CenterZ + 0.4f;
 		num2 += (num2 - num) * ExtraBack;
-		return FireZone.ScaledBox(Frame, new Vector3(MinX - 1f, -0.3f, num), new Vector3(MaxX + 1f, Math.Max(1.7f, Door.y + DoorHalfHeight + 0.9f), num2), ZoneScale, "stove door opener");
+		return FireZone.ScaledBox(Frame, new Vector3(MinX - 1f, Furnace ? Bottom : (-0.3f), num), new Vector3(MaxX + 1f, Math.Max(1.7f, Door.y + DoorHalfHeight + 0.9f), num2), ZoneScale, "stove door opener");
 	}
 
 	private static bool SpotsCentre(FireplaceInteraction fi, Transform space, out Vector3 centre)
