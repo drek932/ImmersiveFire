@@ -1,67 +1,105 @@
-Before publishing, replace the links LINK_IMMERSIVE_FIRE, LINK_IMMERSIVE_COOKING and LINK_IMMERSIVE_CRAFTING with the Nexus pages of these mods.
+HOW TO USE THIS FILE
+- SHORT DESCRIPTION -> the "Brief overview" / summary field (208 characters).
+- LONG DESCRIPTION -> the description editor: switch it to the BBCode tab (top-right of the editor) and paste everything between the markers.
+- Before publishing, replace LINK_IMMERSIVE_FIRE, LINK_IMMERSIVE_COOKING and LINK_IMMERSIVE_CRAFTING with the Nexus pages of these mods.
+- Suggested tags/category: Gameplay, Immersion, Quality of Life.
+- Pictures sell a mod: put a GIF or short video near the top (e.g. [img]URL[/img] right under the title).
 
 ==================== SHORT DESCRIPTION ====================
-
 Tools and materials lying at a workbench count as if you carried them. Craft at a workbench, ammo workbench, forge or fire with what lies around it — no more emptying your pack and picking everything back up.
 
-==================== LONG DESCRIPTION ====================
+==================== LONG DESCRIPTION (BBCode) ====================
+[center][size=6][b]Immersive Crafting[/b][/size]
+[size=3][i]Your workbench, your tools.[/i][/size][/center]
 
-Immersive Crafting — your workbench, your tools
-In The Long Dark, a good base has a workshop. The hacksaw hangs by the bench, the hides lie in a pile, the gunpowder waits on the ammo workbench. And yet the game only sees what is in your backpack: to craft, you pick everything up, craft, and put it all back down again.
-Immersive Crafting lets the workbench see what is on it. The tools and materials lying there count as if you carried them — and your pack stays as it was.
+In The Long Dark, a good base has a workshop. The hacksaw lies by the bench, the hides in a pile, the gunpowder waits on the ammo workbench. And yet the game only sees your backpack: to craft, you pick everything up, craft, and put it all back down.
 
-What it does
+[b]Immersive Crafting lets the workbench see what is on it.[/b] The tools and materials lying there count as if you carried them — and your pack stays as it was.
 
-* Tools nearby — tools lying next to a workbench, ammo workbench, furniture workbench, forge or a fire (crafting at a fire) can be selected for crafting.
-* Materials nearby — materials lying there count and are used: items, weight-based materials, powder (gunpowder) and liquids (lamp oil). Exactly the needed amount is taken. What you carry is used first, then the items lying nearby (from the top down, then the farthest first).
-* Workbench drawer — tools and materials in small containers next to a workbench (up to 5 kg, like its own drawer) count too. Only unlocked, already searched containers; items lying openly are used first.
-* Ice fishing holes — an axe, prybar or other tool lying next to a fishing hole can be used to cut or clear it.
+[line]
+[size=5][b]Features[/b][/size]
+[list]
+[*][b]Tools nearby[/b] — tools lying next to a workbench, ammo workbench, furniture workbench, forge or a fire (crafting at a fire) can be selected for crafting.
+[*][b]Materials nearby[/b] — items, weight-based materials, gunpowder and lamp oil lying there count and are used. Exactly the needed amount is taken. What you carry is used first, then what lies nearby (from the top down, the farthest first).
+[*][b]Workbench drawer[/b] — tools and materials in small containers next to a workbench (up to 5 kg, like its own drawer) count too. Only unlocked, already searched containers; items lying openly are used first.
+[*][b]Ice fishing holes[/b] — an axe, prybar or other tool lying next to a fishing hole can be used to cut or clear it.
+[/list]
 
-The crafting menu shows the real counts ("2 / 3") including what lies nearby. Repairing and fishing itself are not changed.
+The crafting menu shows the real counts ("2 / 3"), including what lies nearby. Repairing and fishing itself are not changed.
 
-Settings
-Everything is in Mod Settings → Immersive Crafting:
+[line]
+[size=5][b]Settings[/b][/size]
+Everything is in [b]Mod Settings → Immersive Crafting[/b]. Every option has a description in English and Russian.
+[spoiler]Show all settings
+[list]
+[*]Tools lying nearby — [b]On[/b]
+[*]Materials lying nearby — [b]On[/b]
+[*]Small containers at the workbench — [b]On[/b]
+[*]Distance at a workbench — [b]1.0 m[/b]
+[*]Distance at a forge — [b]2.5 m[/b]
+[*]Distance at a fire — [b]1.0 m[/b]
+[*]Tools next to the fishing hole — [b]On[/b]
+[*]Distance at a fishing hole — [b]1.0 m[/b]
+[/list]
+[/spoiler]
 
-* Tools lying nearby — on
-* Materials lying nearby — on
-* Small containers at the workbench — on
-* Distance at a workbench — 1.0 m
-* Distance at a forge — 2.5 m
-* Distance at a fire — 1.0 m
-* Tools next to the fishing hole — on
-* Distance at a fishing hole — 1.0 m
+[line]
+[size=5][b]Better together[/b][/size]
+The three Immersive mods are separate: each one works on its own. Together they make the whole camp work the way it looks — fuel goes into the fire by hand, the pot is filled from what lies by the fire, and the workbench uses what lies on it. [b]For the most immersive game, install all three:[/b]
+[list]
+[*][b][url=LINK_IMMERSIVE_FIRE]Immersive Fire[/url][/b] — put fuel into a fire by hand and it burns; stove doors open for you, fires feed themselves.
+[*][b][url=LINK_IMMERSIVE_COOKING]Immersive Cooking[/url][/b] — cook with the pots, food and water lying next to the fire.
+[*][b][url=LINK_IMMERSIVE_CRAFTING]Immersive Crafting[/url][/b] — craft with the tools and materials lying at the workbench. [i](this mod)[/i]
+[/list]
+[b]Also recommended:[/b] [url=https://www.nexusmods.com/thelongdark/mods/125]Perfect Placement[/url] — firewood, cans and tools go down in neat rows and stacks, right where these mods will use them.
 
-Every option has a description in English and Russian, and the texts follow the game's language.
+[quote][b]Already have Perfect Placement? Update it to version 0.32.0 or newer.[/b] Older versions are not compatible with the Immersive mods.[/quote]
 
-Better together
-Immersive Fire, Immersive Cooking and Immersive Crafting are separate mods: each works on its own. Together they make the whole camp work the way it looks — fuel goes into the fire by hand, food and water lying by the fire go into the pot, and tools and materials lying at the workbench go into crafting. For the most immersive game, install all three:
+[line]
+[size=5][b]Requirements[/b][/size]
+[list]
+[*][url=https://github.com/LavaGang/MelonLoader]MelonLoader[/url]
+[*][url=https://github.com/DigitalzombieTLD/ModSettings]ModSettings[/url]
+[/list]
 
-* [Immersive Fire](LINK_IMMERSIVE_FIRE) — put fuel into a fire and it burns; stoves open their doors for you and fires can feed themselves.
-* [Immersive Cooking](LINK_IMMERSIVE_COOKING) — cook with what lies next to the fire, without emptying your pack onto the floor.
-* [Immersive Crafting](LINK_IMMERSIVE_CRAFTING) — tools and materials lying at a workbench count as if you carried them.
+[size=5][b]Installation[/b][/size]
+[list=1]
+[*]Install the requirements.
+[*]Put [b]ImmersiveCrafting.dll[/b] into the game's [b]Mods[/b] folder.
+[*]Start the game and set the mod up in [b]Mod Settings[/b].
+[/list]
+[b]Updating:[/b] replace the old ImmersiveCrafting.dll. Your settings are kept.
+[b]Removing:[/b] delete ImmersiveCrafting.dll.
 
-Also recommended: [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — put firewood, cans and tools down neatly, right where these mods will use them.
+[size=5][b]Compatibility[/b][/size]
+[list]
+[*]Tested with [b]The Long Dark 2.54[/b] and [b]MelonLoader 0.7.2[/b].
+[*]English and Russian; the mod follows the game language.
+[/list]
 
-Important: if you already have Perfect Placement, update it to version 0.32.0 or newer. Older versions are not compatible.
+[size=5][b]FAQ[/b][/size]
+[b]Does it take items from my locked or unsearched containers?[/b]
+No. Only unlocked containers you have already searched, up to 5 kg, next to a workbench.
 
-Requirements
+[b]Which items are used first?[/b]
+What you carry, then what lies openly nearby (from the top down, the farthest first), then the small containers.
 
-* [MelonLoader](https://github.com/LavaGang/MelonLoader)
-* [ModSettings](https://github.com/DigitalzombieTLD/ModSettings)
+[b]Will it count the same item twice with Immersive Cooking?[/b]
+No. Recipes in the cooking menu belong to Immersive Cooking, all other crafting to Immersive Crafting.
 
-Installation
-Put ImmersiveCrafting.dll into the game's Mods folder.
+[size=5][b]Bugs and ideas[/b][/size]
+Please report bugs in the [b]Bugs[/b] tab and attach [b]MelonLoader/Latest.log[/b] — it tells me what the mod was doing. Ideas are welcome in the [b]Posts[/b] tab.
 
-Compatibility
-Tested with The Long Dark 2.54 and MelonLoader 0.7.2.
-
-Support the author
+[line]
+[size=5][b]Support the author[/b][/size]
 If you enjoy my work, you can leave a voluntary donation on Ko-fi or Boosty.
-☕ [Support me on Ko-fi](https://ko-fi.com/drek932)
-💙 [Support me on Boosty](https://boosty.to/alternatively)
+☕ [url=https://ko-fi.com/drek932]Support me on Ko-fi[/url]
+💙 [url=https://boosty.to/alternatively]Support me on Boosty[/url]
 
-My other mods
-
-* [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — items snap neatly into rows, stacks and blocks, so your base looks like a home, not a dump.
-* [FishingFinds](https://www.nexusmods.com/thelongdark/mods/121) — an alternative to Beachcombing for every frozen lake: fishing through the ice sometimes brings up lost items, from planks and tackle to rare finds.
-* [CraftCategories](https://www.nexusmods.com/thelongdark/mods/124) — gives every crafting mod its own category in the crafting menu, so modded recipes stop getting lost among the game's own.
+[size=5][b]My other mods[/b][/size]
+[list]
+[*][url=https://www.nexusmods.com/thelongdark/mods/125]Perfect Placement[/url] — items snap neatly into rows, stacks and blocks, so your base looks like a home, not a dump.
+[*][url=https://www.nexusmods.com/thelongdark/mods/121]FishingFinds[/url] — fishing through the ice sometimes brings up lost items, from planks and tackle to rare finds.
+[*][url=https://www.nexusmods.com/thelongdark/mods/124]CraftCategories[/url] — every crafting mod gets its own category in the crafting menu.
+[/list]
+==================== END ====================
