@@ -4,6 +4,9 @@ using ImmersiveShared;
 using MelonLoader;
 using UnityEngine;
 
+[assembly: MelonInfo(typeof(ImmersiveFire.Main), "ImmersiveFire", "0.16.4", "drek932")]
+[assembly: MelonGame("Hinterland", "TheLongDark")]
+
 namespace ImmersiveFire;
 
 public sealed class Main : MelonMod

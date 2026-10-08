@@ -8,7 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>ImmersiveFire</AssemblyName>
     <RootNamespace>ImmersiveFire</RootNamespace>
-    <Version>0.16.3</Version>
+    <Version>0.16.4</Version>
     <!-- dotnet build -c Release -p:Verbose=true : step-by-step log for testing (Verbose.Log calls are compiled in). -->
     <DefineConstants Condition="'$(Verbose)' == 'true'">$(DefineConstants);VERBOSE</DefineConstants>
     <Authors>drek932</Authors>
@@ -37,6 +37,7 @@
     <Reference Include="UnityEngine.CoreModule" HintPath="$(Il2CppPath)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.PhysicsModule" HintPath="$(Il2CppPath)\UnityEngine.PhysicsModule.dll" Private="false" />
     <Reference Include="Unity.Addressables" HintPath="$(Il2CppPath)\Unity.Addressables.dll" Private="false" />
+    <Reference Include="Il2CppAK.Wwise.Unity.API.WwiseTypes" HintPath="$(Il2CppPath)\Il2CppAK.Wwise.Unity.API.WwiseTypes.dll" Private="false" />
     <Reference Include="Unity.ResourceManager" HintPath="$(Il2CppPath)\Unity.ResourceManager.dll" Private="false" />
     <Reference Include="Il2CppTLD.Addressables" HintPath="$(Il2CppPath)\Il2CppTLD.Addressables.dll" Private="false" />
     <Reference Include="Il2CppTLD.PDID" HintPath="$(Il2CppPath)\Il2CppTLD.PDID.dll" Private="false" />
