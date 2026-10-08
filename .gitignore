@@ -1,7 +1,6 @@
 # Build output
 bin/
 obj/
-releases/
 
 # IDE files
 *.user
