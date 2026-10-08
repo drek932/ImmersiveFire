@@ -1,0 +1,72 @@
+Before publishing, replace the links LINK_IMMERSIVE_FIRE, LINK_IMMERSIVE_COOKING and LINK_IMMERSIVE_CRAFTING with the Nexus pages of these mods.
+
+==================== SHORT DESCRIPTION ====================
+
+Cook with what lies next to the fire. Pots, food, water and recipe ingredients lying by the fire show up in the cooking menu and fly into the pot one by one — no more emptying your pack onto the floor and picking it back up.
+
+==================== LONG DESCRIPTION ====================
+
+Immersive Cooking — cook with what lies next to the fire
+In The Long Dark, a camp kitchen is a real place. The pot sits by the stove, the meat lies on the table, the water bottles stand in a row. And yet the game only sees what is in your backpack: to cook, you pick everything up, cook, and put it all back down again.
+Immersive Cooking lets the fire see what is around it. The pot lying by the stove goes onto the fire. The meat on the table shows up in the cooking menu. Recipe ingredients fly into the pot one by one — and your pack stays as it was.
+
+Cookware and food next to the fire
+
+* Cookware next to the fire — empty pots and pans lying near a fire show up when you choose cookware for Cook or Water. The chosen one moves onto the fire by itself (it is the same item, nothing is duplicated). Cookware you carry is offered first.
+* Cook button — the fire menu gets a Cook action that puts nearby cookware on the fire and opens the cooking menu.
+* Food next to the fire — the cooking menu lists food lying near the fire, in the same order the game uses.
+* Recipes — ingredients, cooking oil, broth, flour and drinking water lying near the fire count for recipes. Exactly the needed amount is taken. What you carry is used first, then the items lying nearby.
+* Boiling water — unsafe water lying near the fire can be boiled.
+* Place — loose food lying near the fire can be put on it with Place.
+
+Flying ingredients
+
+* What the cooking, boiling or Place menu takes from around the fire flies into the cookware one at a time, around furniture: food drops in over the rim, bottles, bags and broth come to the rim and pour, and what is left goes back to its place.
+* The game's sounds play as each one goes in, and the food shows in the cookware once the last ingredient is in.
+* Nothing changes in the game itself: the items are used the moment you choose, so you can save at any time.
+
+Small comforts
+
+* Food stays usable — food put down next to a fire doesn't start warming up by itself (optional).
+* Skip recipe preparation — a recipe goes straight into the cookware; the dish cooks that much longer, so the whole recipe takes exactly the time the menu shows. The skill point is still given (optional).
+* Same food listed once — pieces of the same food with the same weight show as one line, so lots of meat doesn't push the recipes down (optional).
+* Tidy fire menu — Place, Water and Cook show only when they can be used (optional).
+* One switch — turn the whole mod off in its settings without removing it.
+
+Works at every fire: campfires, stoves, barrels and fireplaces.
+
+Settings
+Everything is in Mod Settings → Immersive Cooking: what counts next to the fire, the distance (1.5 m by default), recipe preparation, and how the ingredients fly (speed, pauses, whole item or the needed part). Every option has a description in English and Russian, and the texts follow the game's language.
+
+Better together
+Immersive Fire, Immersive Cooking and Immersive Crafting are separate mods: each works on its own. Together they make the whole camp work the way it looks — fuel goes into the fire by hand, food and water lying by the fire go into the pot, and tools and materials lying at the workbench go into crafting. For the most immersive game, install all three:
+
+* [Immersive Fire](LINK_IMMERSIVE_FIRE) — put fuel into a fire and it burns; stoves open their doors for you and fires can feed themselves.
+* [Immersive Cooking](LINK_IMMERSIVE_COOKING) — cook with what lies next to the fire, without emptying your pack onto the floor.
+* [Immersive Crafting](LINK_IMMERSIVE_CRAFTING) — tools and materials lying at a workbench count as if you carried them.
+
+Also recommended: [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — put firewood, cans and tools down neatly, right where these mods will use them.
+
+Important: if you already have Perfect Placement, update it to version 0.32.0 or newer. Older versions are not compatible.
+
+Requirements
+
+* [MelonLoader](https://github.com/LavaGang/MelonLoader)
+* [ModSettings](https://github.com/DigitalzombieTLD/ModSettings)
+
+Installation
+Put ImmersiveCooking.dll into the game's Mods folder.
+
+Compatibility
+Tested with The Long Dark 2.54 and MelonLoader 0.7.2.
+
+Support the author
+If you enjoy my work, you can leave a voluntary donation on Ko-fi or Boosty.
+☕ [Support me on Ko-fi](https://ko-fi.com/drek932)
+💙 [Support me on Boosty](https://boosty.to/alternatively)
+
+My other mods
+
+* [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — items snap neatly into rows, stacks and blocks, so your base looks like a home, not a dump.
+* [FishingFinds](https://www.nexusmods.com/thelongdark/mods/121) — an alternative to Beachcombing for every frozen lake: fishing through the ice sometimes brings up lost items, from planks and tackle to rare finds.
+* [CraftCategories](https://www.nexusmods.com/thelongdark/mods/124) — gives every crafting mod its own category in the crafting menu, so modded recipes stop getting lost among the game's own.

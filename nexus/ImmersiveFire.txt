@@ -1,0 +1,92 @@
+Before publishing, replace the links LINK_IMMERSIVE_FIRE, LINK_IMMERSIVE_COOKING and LINK_IMMERSIVE_CRAFTING with the Nexus pages of these mods.
+
+==================== SHORT DESCRIPTION ====================
+
+Feed your fires by hand. Put or throw fuel into a campfire, stove, fireplace or forge and it burns — no menu. Stove doors open as you bring wood, and a fire can feed itself from the fuel lying around it or from a firewood bin you craft.
+
+==================== LONG DESCRIPTION ====================
+
+Immersive Fire — feed the fire by hand
+In The Long Dark, the fire is the heart of every night. You split the wood, carry it in, stack it by the stove. And then you open a menu, pick a stick from a list, and watch a progress bar.
+Immersive Fire lets you do it the way it looks. Put a log into the stove and it burns. Toss a stick at the campfire and the fire takes it. Stack your firewood next to the stove, and the stove keeps itself going while you sleep.
+
+Put fuel in — it burns
+
+* Campfires — fuel put inside the stone ring of a burning campfire burns, as if you added it from the menu.
+* Fireplaces and open hearths — fuel put into a burning fireplace burns.
+* Stoves and barrels — fuel put to the fire of a burning stove or barrel burns. Items on the stove top and on cooking spots are left alone.
+* Forge — fuel put into a burning forge burns, following the forge's rules.
+* Ammo workbench — its furnace takes fuel just like a stove.
+
+The fire draws fuel in
+
+* Carry or throw fuel near a burning campfire, and the fire draws it in.
+* In front of a stove door there is a "funnel": fuel that lands there flies in through the door. Fuel at the sides of the stove goes in too.
+* Stove doors open by themselves when you bring fuel close, and close again once it is in.
+* Groups of items carried with Perfect Placement 0.32.0+ burn together.
+
+The game's rules stay
+
+* When the fire can't take the fuel (wind, the fire already burns long enough, too early for coal), you get the game's own message. The fuel stays where it lies and burns once it can.
+* Unread skill books: ask (like the game), never burn, or burn — your choice.
+* With More Fuels & Accelerants, tinder goes into the fire when its "tinder as fuel" setting is on.
+
+Auto-feed
+
+* Hold Left Shift (configurable) in the fire menu to choose when the fire adds fuel by itself: when less than 15, 30 or 60 minutes of burning are left.
+* The fire takes the fuel lying in its zones — the woodpile next to the stove is all it needs.
+* The "Auto-feed" button can take the place of "Add fuel" in the fire menu (stoves, barrels and forges; optional for campfires).
+* Auto-feed is kept in your save.
+
+Firewood bin
+
+* A large wooden bin with a hinged lid, crafted from 6 softwood.
+* A fire nearby with auto-feed on takes its fuel from the bin.
+
+Looks natural
+
+* Near a fire, the item you move can go without the green or red highlight, so putting fuel in looks natural (for fuel only, for every item, or as in the game).
+
+Settings
+Everything is in Mod Settings → Immersive Fire:
+
+* Fires: campfires, fireplaces, stoves and barrels, forge — each can be turned off; campfire and stove zones can be made bigger.
+* Rules: unread skill books, messages, stove funnel size, pull animation speed, stove door timing.
+* Auto-feed: mode (pull and auto-feed, pull only, auto-feed only), the button instead of "Add fuel", the key for the time choice.
+* Look: highlight near a fire and the distance it is hidden at.
+
+Every option has a description in English and Russian, and the texts follow the game's language.
+
+Better together
+Immersive Fire, Immersive Cooking and Immersive Crafting are separate mods: each works on its own. Together they make the whole camp work the way it looks — fuel goes into the fire by hand, food and water lying by the fire go into the pot, and tools and materials lying at the workbench go into crafting. For the most immersive game, install all three:
+
+* [Immersive Fire](LINK_IMMERSIVE_FIRE) — put fuel into a fire and it burns; stoves open their doors for you and fires can feed themselves.
+* [Immersive Cooking](LINK_IMMERSIVE_COOKING) — cook with what lies next to the fire, without emptying your pack onto the floor.
+* [Immersive Crafting](LINK_IMMERSIVE_CRAFTING) — tools and materials lying at a workbench count as if you carried them.
+
+Also recommended: [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — put firewood, cans and tools down neatly, right where these mods will use them.
+
+Important: if you already have Perfect Placement, update it to version 0.32.0 or newer. Older versions are not compatible.
+
+Requirements
+
+* [MelonLoader](https://github.com/LavaGang/MelonLoader)
+* [ModSettings](https://github.com/DigitalzombieTLD/ModSettings)
+* ModData
+
+Installation
+Put ImmersiveFire.dll into the game's Mods folder.
+
+Compatibility
+Tested with The Long Dark 2.54 and MelonLoader 0.7.2.
+
+Support the author
+If you enjoy my work, you can leave a voluntary donation on Ko-fi or Boosty.
+☕ [Support me on Ko-fi](https://ko-fi.com/drek932)
+💙 [Support me on Boosty](https://boosty.to/alternatively)
+
+My other mods
+
+* [Perfect Placement](https://www.nexusmods.com/thelongdark/mods/125) — items snap neatly into rows, stacks and blocks, so your base looks like a home, not a dump.
+* [FishingFinds](https://www.nexusmods.com/thelongdark/mods/121) — an alternative to Beachcombing for every frozen lake: fishing through the ice sometimes brings up lost items, from planks and tackle to rare finds.
+* [CraftCategories](https://www.nexusmods.com/thelongdark/mods/124) — gives every crafting mod its own category in the crafting menu, so modded recipes stop getting lost among the game's own.
