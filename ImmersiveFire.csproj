@@ -8,7 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>ImmersiveFire</AssemblyName>
     <RootNamespace>ImmersiveFire</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <!-- dotnet build -c Release -p:Verbose=true : step-by-step log for testing (Verbose.Log calls are compiled in). -->
     <DefineConstants Condition="'$(Verbose)' == 'true'">$(DefineConstants);VERBOSE</DefineConstants>
     <Authors>drek932</Authors>
@@ -36,17 +36,19 @@
     <Reference Include="Il2CppTLD.IntBackedUnit" HintPath="$(Il2CppPath)\Il2CppTLD.IntBackedUnit.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(Il2CppPath)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.PhysicsModule" HintPath="$(Il2CppPath)\UnityEngine.PhysicsModule.dll" Private="false" />
-    <Reference Include="Unity.Addressables" HintPath="$(Il2CppPath)\Unity.Addressables.dll" Private="false" />
-    <Reference Include="Il2CppAK.Wwise.Unity.API.WwiseTypes" HintPath="$(Il2CppPath)\Il2CppAK.Wwise.Unity.API.WwiseTypes.dll" Private="false" />
-    <Reference Include="Unity.ResourceManager" HintPath="$(Il2CppPath)\Unity.ResourceManager.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(Il2CppPath)\UnityEngine.InputLegacyModule.dll" Private="false" />
+    <!-- Debug/Spawner (test only): -->
     <Reference Include="Il2CppTLD.Addressables" HintPath="$(Il2CppPath)\Il2CppTLD.Addressables.dll" Private="false" />
     <Reference Include="Il2CppTLD.PDID" HintPath="$(Il2CppPath)\Il2CppTLD.PDID.dll" Private="false" />
+    <Reference Include="Unity.ResourceManager" HintPath="$(Il2CppPath)\Unity.ResourceManager.dll" Private="false" />
     <Reference Include="UnityEngine.IMGUIModule" HintPath="$(Il2CppPath)\UnityEngine.IMGUIModule.dll" Private="false" />
-    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(Il2CppPath)\UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(Il2CppPath)\UnityEngine.TextRenderingModule.dll" Private="false" />
     <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(Il2CppPath)\UnityEngine.ImageConversionModule.dll" Private="false" />
+    <Reference Include="Il2CppAK.Wwise.Unity.API.WwiseTypes" HintPath="$(Il2CppPath)\Il2CppAK.Wwise.Unity.API.WwiseTypes.dll" Private="false" />
+    <Reference Include="Unity.Addressables" HintPath="$(Il2CppPath)\Unity.Addressables.dll" Private="false" />
 
     <Reference Include="ModSettings" HintPath="$(TLDPath)\Mods\ModSettings.dll" Private="false" />
+    <!-- Auto-feed state saved with the game. -->
     <Reference Include="ModData" HintPath="$(TLDPath)\Mods\ModData.dll" Private="false" />
   </ItemGroup>
 

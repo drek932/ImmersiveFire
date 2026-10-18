@@ -1,1375 +1,795 @@
-#define VERBOSE
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text.Json;
-using HarmonyLib;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using ImmersiveShared;
-using ModData;
 using UnityEngine;
 
-namespace ImmersiveFire;
-
-internal static class FuelFeeder
+namespace ImmersiveFire
 {
-	[HarmonyPatch(typeof(SaveGameSystem), "SaveSceneData")]
-	private static class SaveSceneData
-	{
-		private static void Postfix(string sceneSaveName)
-		{
-			try
-			{
-				SaveAuto(sceneSaveName);
-			}
-			catch (Exception ex)
-			{
-				Main.Log.Error("Saving auto-feed failed: " + ex);
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
-	private static class LoadSceneData
-	{
-		private static void Postfix(string sceneSaveName)
-		{
-			try
-			{
-				LoadAuto(sceneSaveName);
-			}
-			catch (Exception ex)
-			{
-				Main.Log.Error("Loading auto-feed failed: " + ex);
-			}
-		}
-	}
-
-	private sealed class Watched
-	{
-		public FireplaceInteraction Fi;
-
-		public Fire Fire;
-
-		public FireKind Kind;
-
-		public FireZone Zone;
-
-		public FireZone DoorZone;
-
-		public FireZone Funnel;
-
-		public FireZone[] Sides;
-
-		public WoodStove Stove;
-
-		public readonly HashSet<IntPtr> LeftAlone = new HashSet<IntPtr>();
-
-		public readonly Dictionary<IntPtr, Vector3> LastSeen = new Dictionary<IntPtr, Vector3>();
-
-		public readonly HashSet<IntPtr> Asked = new HashSet<IntPtr>();
-
-		public readonly Dictionary<IntPtr, string> Told = new Dictionary<IntPtr, string>();
-
-		public bool Burning => Fire.GetFireState() == FireState.FullBurn;
-
-		public bool Takes
-		{
-			get
-			{
-				if (Burning)
-				{
-					if (DoorZone != null && !(Stove == null))
-					{
-						return Stove.m_Open;
-					}
-					return true;
-				}
-				return false;
-			}
-		}
-
-		public bool DrawsIn(Vector3 p)
-		{
-			if (Funnel == null)
-			{
-				return Zone.Contains(p);
-			}
-			if (Funnel.Contains(p))
-			{
-				return true;
-			}
-			if (Sides != null)
-			{
-				FireZone[] sides = Sides;
-				for (int i = 0; i < sides.Length; i++)
-				{
-					if (sides[i].Contains(p))
-					{
-						return true;
-					}
-				}
-			}
-			return false;
-		}
-	}
-
-	public const int AutoOff = 0;
-
-	private const float AutoEvery = 0.5f;
-
-	private static readonly Dictionary<string, int> autoModes = new Dictionary<string, int>();
-
-	private static float nextAuto;
-
-	private const float BinLayer = 0.12f;
-
-	private const int BinTries = 3;
-
-	private const float BinReach = 10f;
-
-	private static readonly ModDataManager Data = new ModDataManager("ImmersiveFire", false);
-
-	private const string AutoTag = "autofeed_@_";
-
-	private const float ScanEvery = 0.1f;
-
-	private const float FiresEvery = 3f;
-
-	private const float NearPlayer = 25f;
-
-	private const float SettledMove = 0.01f;
-
-	private static readonly List<Watched> fires = new List<Watched>();
-
-	private static float nextScan;
-
-	private static float nextFires;
-
-	private static int gearMask = -1;
-
-	private static int nearFrame = -1;
-
-	private static float nearDistance;
-
-	private static bool nearResult;
-
-	private static IntPtr heldKey;
-
-	private static bool hoverFed;
-
-	private const float ThrownWatch = 4f;
-
-	private static readonly List<(GearItem item, float until, bool told)> thrown = new List<(GearItem, float, bool)>();
-
-	private static int tinderFrame = -1;
-
-	private static bool tinderIsFuel;
-
-	private static int soundOnArrivalFrame = -1;
-
-	private const float StepOut = 0.7f;
-
-	private const float LineUp = 0.35f;
-
-	private const float Inside = 0.3f;
-
-	private static float lastSound = -1f;
-
-	private static bool TinderIsFuel
-	{
-		get
-		{
-			if (tinderFrame != Time.frameCount)
-			{
-				tinderFrame = Time.frameCount;
-				tinderIsFuel = OtherMods.TinderIsFuel;
-			}
-			return tinderIsFuel;
-		}
-	}
-
-	private static string KeyOf(FireplaceInteraction fi)
-	{
-		Vector3 position = fi.transform.position;
-		return string.Format(CultureInfo.InvariantCulture, "{0:0.00},{1:0.00},{2:0.00}", position.x, position.y, position.z);
-	}
-
-	public static int AutoMode(FireplaceInteraction fi)
-	{
-		if (!(fi != null) || !autoModes.TryGetValue(KeyOf(fi), out var value))
-		{
-			return 0;
-		}
-		return value;
-	}
-
-	public static void SetAutoMode(FireplaceInteraction fi, int mode)
-	{
-		if (!(fi == null))
-		{
-			string text = KeyOf(fi);
-			if (mode == 0)
-			{
-				autoModes.Remove(text);
-			}
-			else
-			{
-				autoModes[text] = mode;
-			}
-			Main.Log.Msg($"Auto-feed of '{fi.gameObject.name}' at {text}: {Describe(mode)}");
-		}
-	}
-
-	public static string Describe(int mode)
-	{
-		return mode switch
-		{
-			0 => "off", 
-			_ => $"below {mode} min left", 
-		};
-	}
-
-	public static FireplaceInteraction FireplaceOf(Fire fire)
-	{
-		if (fire == null)
-		{
-			return null;
-		}
-		foreach (Watched fire2 in fires)
-		{
-			if (fire2.Fire != null && fire2.Fire.Pointer == fire.Pointer)
-			{
-				return fire2.Fi;
-			}
-		}
-		return fire.GetComponentInParent<FireplaceInteraction>();
-	}
-
-	private static void AutoFeedTick(Vector3 playerPos)
-	{
-		if (autoModes.Count == 0 || Time.time < nextAuto)
-		{
-			return;
-		}
-		nextAuto = Time.time + 0.5f;
-		foreach (Watched fire in fires)
-		{
-			try
-			{
-				if (!Watching(fire, playerPos) || !fire.Burning)
-				{
-					continue;
-				}
-				string key = KeyOf(fire.Fi);
-				if (!autoModes.TryGetValue(key, out var value))
-				{
-					continue;
-				}
-				bool flag;
-				switch (value)
-				{
-				case 0:
-					goto end_IL_005e;
-				default:
-					flag = fire.Fire.GetRemainingLifeTimeSeconds() / 60f < (float)value;
-					break;
-				}
-				if (!flag)
-				{
-					continue;
-				}
-				GearItem gearItem = ZoneFuel(fire);
-				FirewoodBins.ExitPlan found = null;
-				if (!(gearItem == null))
-				{
-					goto IL_015d;
-				}
-				List<GearItem> list = BinFuel(fire);
-				if (list.Count != 0)
-				{
-					if (FirewoodBins.ReadyFor(PointOf(list[0])))
-					{
-						(gearItem, found) = WayOutOfBin(fire, list);
-						goto IL_015d;
-					}
-					nextAuto = Math.Min(nextAuto, Time.time + 0.1f);
-				}
-				goto end_IL_005e;
-				IL_015d:
-				Pull(fire, gearItem, found);
-				Feed(fire, gearItem);
-				Verbose.Log($"Auto-feed ({Describe(value)}): {gearItem.name} into the {fire.Kind} '{fire.Fi.gameObject.name}', now {fire.Fire.GetRemainingLifeTimeHours():0.00} h left");
-				end_IL_005e:;
-			}
-			catch (Exception ex)
-			{
-				Once.Warn("auto:" + ex.GetType().Name, "Auto-feed failed: " + ex);
-			}
-		}
-	}
-
-	private static bool GoesBefore(Vector3 p, Vector3 than, Vector3 player)
-	{
-		if (Math.Abs(p.y - than.y) > 0.01f)
-		{
-			return p.y > than.y;
-		}
-		return (p - player).sqrMagnitude > (than - player).sqrMagnitude;
-	}
-
-	private static List<GearItem> BinFuel(Watched w)
-	{
-		if (gearMask < 0)
-		{
-			gearMask = 1 << LayerMask.NameToLayer("Gear");
-		}
-		PlayerManager playerManagerComponent = GameManager.GetPlayerManagerComponent();
-		List<(GearItem, Vector3)> list = new List<(GearItem, Vector3)>();
-		HashSet<IntPtr> hashSet = new HashSet<IntPtr>();
-		foreach (var (center, halfExtents, orientation) in FirewoodBins.Near(w.Fi.transform.position, 10f))
-		{
-			foreach (Collider item3 in Physics.OverlapBox(center, halfExtents, orientation, gearMask, QueryTriggerInteraction.Collide))
-			{
-				GearItem gearItem = ((item3 != null) ? item3.GetComponentInParent<GearItem>() : null);
-				if (!(gearItem == null) && hashSet.Add(gearItem.Pointer) && IsLooseFuel(gearItem, playerManagerComponent))
-				{
-					Vector3 vector = PointOf(gearItem);
-					if (FirewoodBins.InBin(vector) && CanTakeNow(w, gearItem))
-					{
-						list.Add((gearItem, vector));
-					}
-				}
-			}
-		}
-		float top = float.MinValue;
-		foreach (var item4 in list)
-		{
-			Vector3 item = item4.Item2;
-			top = Math.Max(top, item.y);
-		}
-		list.Sort(delegate((GearItem gi, Vector3 at) a, (GearItem gi, Vector3 at) b)
-		{
-			int num = Layer(a.at).CompareTo(Layer(b.at));
-			return (num == 0) ? FirewoodBins.TowardsLid(b.at).CompareTo(FirewoodBins.TowardsLid(a.at)) : num;
-		});
-		List<GearItem> list2 = new List<GearItem>();
-		Transform transform = ((list.Count > 0) ? FirewoodBins.BinOf(list[0].Item2) : null);
-		foreach (var item5 in list)
-		{
-			var (item2, _) = item5;
-			if (FirewoodBins.BinOf(item5.Item2) == transform)
-			{
-				list2.Add(item2);
-			}
-		}
-		return list2;
-		int Layer(Vector3 at)
-		{
-			return (int)Math.Floor((top - at.y) / 0.12f);
-		}
-	}
-
-	private static (GearItem gi, FirewoodBins.ExitPlan exit) WayOutOfBin(Watched w, List<GearItem> inBin)
-	{
-		Vector3 toward = TowardOf(w);
-		for (int i = 0; i < Math.Min(3, inBin.Count); i++)
-		{
-			(Vector3 centre, Quaternion rotation, Vector3 half) tuple = BoxOf(inBin[i]);
-			Vector3 item = tuple.centre;
-			Quaternion item2 = tuple.rotation;
-			Vector3 item3 = tuple.half;
-			FirewoodBins.ExitPlan exitPlan = FirewoodBins.ExitPath(item, item2, item3, toward);
-			if (exitPlan != null && exitPlan.Found)
-			{
-				if (i > 0)
-				{
-					Verbose.Log($"[Bin] Piece {i + 1} in the bin's order taken: the ones before it had no clear way out");
-				}
-				return (gi: inBin[i], exit: exitPlan);
-			}
-		}
-		return (gi: inBin[0], exit: null);
-	}
-
-	private static GearItem ZoneFuel(Watched w)
-	{
-		if (gearMask < 0)
-		{
-			gearMask = 1 << LayerMask.NameToLayer("Gear");
-		}
-		PlayerManager playerManagerComponent = GameManager.GetPlayerManagerComponent();
-		Transform playerTransform = GameManager.GetPlayerTransform();
-		Vector3 player = ((playerTransform != null) ? playerTransform.position : w.Fi.transform.position);
-		List<FireZone> list = new List<FireZone> { w.Zone };
-		if (w.Funnel != null)
-		{
-			list.Add(w.Funnel);
-		}
-		if (w.Sides != null)
-		{
-			list.AddRange(w.Sides);
-		}
-		GearItem gearItem = null;
-		Vector3 than = Vector3.zero;
-		HashSet<IntPtr> hashSet = new HashSet<IntPtr>();
-		foreach (FireZone item in list)
-		{
-			foreach (Collider item2 in Physics.OverlapSphere(item.Center, item.Reach, gearMask, QueryTriggerInteraction.Collide))
-			{
-				GearItem gearItem2 = ((item2 != null) ? item2.GetComponentInParent<GearItem>() : null);
-				if (!(gearItem2 == null))
-				{
-					Vector3 vector = PointOf(gearItem2);
-					if (!FirewoodBins.Inside(vector) && hashSet.Add(gearItem2.Pointer) && IsLooseFuel(gearItem2, playerManagerComponent) && (item.Contains(vector) || w.DrawsIn(vector) || w.Zone.Contains(vector)) && CanTakeNow(w, gearItem2) && (gearItem == null || GoesBefore(vector, than, player)))
-					{
-						gearItem = gearItem2;
-						than = vector;
-					}
-				}
-			}
-		}
-		return gearItem;
-	}
-
-	private static void SaveAuto(string sceneSaveName)
-	{
-		Data.Save(JsonSerializer.Serialize(autoModes), "autofeed_@_" + sceneSaveName);
-		if (autoModes.Count > 0)
-		{
-			Main.Log.Msg($"Saved auto-feed of {autoModes.Count} fire(s) in {sceneSaveName}");
-		}
-	}
-
-	private static void LoadAuto(string sceneSaveName)
-	{
-		autoModes.Clear();
-		string text = Data.Load("autofeed_@_" + sceneSaveName);
-		if (string.IsNullOrEmpty(text))
-		{
-			return;
-		}
-		try
-		{
-			Dictionary<string, int> dictionary = JsonSerializer.Deserialize<Dictionary<string, int>>(text);
-			if (dictionary != null)
-			{
-				foreach (KeyValuePair<string, int> item in dictionary)
-				{
-					autoModes[item.Key] = ((item.Value < 0) ? 30 : item.Value);
-				}
-			}
-			if (autoModes.Count > 0)
-			{
-				Main.Log.Msg($"Auto-feed of {autoModes.Count} fire(s) back in {sceneSaveName}");
-			}
-		}
-		catch (Exception ex)
-		{
-			Main.Log.Error("Saved auto-feed of " + sceneSaveName + " unreadable: " + ex.Message);
-		}
-	}
-
-	public static void Reset()
-	{
-		fires.Clear();
-		nextScan = (nextFires = 0f);
-		heldKey = IntPtr.Zero;
-		thrown.Clear();
-		StoveDoors.Reset();
-		FuelFlight.Reset();
-		StoveLayout.Reset();
-	}
-
-	public static void Update()
-	{
-		Transform playerTransform = GameManager.GetPlayerTransform();
-		if (playerTransform == null)
-		{
-			return;
-		}
-		float time = Time.time;
-		if (time >= nextFires)
-		{
-			nextFires = time + 3f;
-			RefreshFires();
-		}
-		try
-		{
-			FuelFlight.Update();
-			UpdateDoors(playerTransform.position);
-			if (Main.Settings.AutoOn)
-			{
-				AutoFeedTick(playerTransform.position);
-			}
-			if (Main.Settings.PullOn)
-			{
-				CheckHeld(playerTransform.position);
-			}
-			if (thrown.Count > 0)
-			{
-				if (Main.Settings.PullOn)
-				{
-					CheckThrown(playerTransform.position);
-				}
-				else
-				{
-					thrown.Clear();
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			Once.Warn("held:" + ex.GetType().Name, "Checking the item being moved or thrown failed: " + ex);
-		}
-		if (time < nextScan || !Main.Settings.PullOn)
-		{
-			return;
-		}
-		nextScan = time + 0.1f;
-		if (gearMask < 0)
-		{
-			gearMask = 1 << LayerMask.NameToLayer("Gear");
-		}
-		foreach (Watched fire in fires)
-		{
-			try
-			{
-				if (Watching(fire, playerTransform.position))
-				{
-					Scan(fire);
-				}
-			}
-			catch (Exception ex2)
-			{
-				Once.Warn("scan:" + ex2.GetType().Name, "Watching a fire failed: " + ex2);
-			}
-		}
-	}
-
-	public static IEnumerable<(FireplaceInteraction fi, FireKind kind, FireZone zone, FireZone door, FireZone funnel, FireZone[] sides)> Fires()
-	{
-		foreach (Watched fire in fires)
-		{
-			if (fire.Fi != null)
-			{
-				yield return (fi: fire.Fi, kind: fire.Kind, zone: fire.Zone, door: fire.DoorZone, funnel: fire.Funnel, sides: fire.Sides);
-			}
-		}
-	}
-
-	private static bool Watching(Watched w, Vector3 playerPos)
-	{
-		if (w.Fi != null && w.Fire != null && Enabled(w.Kind))
-		{
-			return (w.Fi.transform.position - playerPos).sqrMagnitude <= 625f;
-		}
-		return false;
-	}
-
-	private static bool Enabled(FireKind kind)
-	{
-		return kind switch
-		{
-			FireKind.Campfire => Main.Settings.campfires, 
-			FireKind.Fireplace => Main.Settings.fireplaces, 
-			FireKind.Stove => Main.Settings.stoves, 
-			FireKind.Forge => Main.Settings.forges, 
-			_ => false, 
-		};
-	}
-
-	public static void RebuildZones()
-	{
-		foreach (Watched fire in fires)
-		{
-			if (!(fire.Fi == null))
-			{
-				fire.Zone = FireZone.For(fire.Fi, fire.Kind);
-				fire.DoorZone = FireZone.DoorTrigger(fire.Fi);
-				fire.Funnel = FireZone.Funnel(fire.Fi);
-				fire.Sides = FireZone.Sides(fire.Fi);
-			}
-		}
-	}
-
-	private static void RefreshFires()
-	{
-		Il2CppArrayBase<FireplaceInteraction> il2CppArrayBase = UnityEngine.Object.FindObjectsOfType<FireplaceInteraction>();
-		List<Watched> list = new List<Watched>();
-		foreach (FireplaceInteraction fi in il2CppArrayBase)
-		{
-			if (fi == null || fi.Fire == null)
-			{
-				continue;
-			}
-			Watched watched = fires.Find((Watched w) => w.Fi != null && w.Fi.Pointer == fi.Pointer);
-			if (watched == null)
-			{
-				FireKind fireKind = FireZone.KindOf(fi);
-				watched = new Watched
-				{
-					Fi = fi,
-					Fire = fi.Fire,
-					Kind = fireKind,
-					Zone = FireZone.For(fi, fireKind),
-					DoorZone = FireZone.DoorTrigger(fi),
-					Funnel = FireZone.Funnel(fi),
-					Sides = FireZone.Sides(fi),
-					Stove = fi.TryCast<WoodStove>()
-				};
-				Verbose.Log($"Watching {fireKind} '{fi.gameObject.name}': {watched.Zone}");
-				AmmoWorkBench componentInChildren = StoveLayout.ModelRoot(fi.transform).GetComponentInChildren<AmmoWorkBench>(includeInactive: true);
-				if (componentInChildren != null)
-				{
-					Main.Log.Msg($"Ammo workbench fire '{fi.gameObject.name}' ({fireKind}, door {((watched.Stove != null && watched.Stove.m_ObjectAnim != null) ? "animated" : "none")}), the bench: {FirewoodBins.Describe(componentInChildren.gameObject)}");
-				}
-			}
-			list.Add(watched);
-		}
-		fires.Clear();
-		fires.AddRange(list);
-	}
-
-	public static bool FireNearPlayer(float distance)
-	{
-		if (nearFrame == Time.frameCount && nearDistance == distance)
-		{
-			return nearResult;
-		}
-		nearFrame = Time.frameCount;
-		nearDistance = distance;
-		nearResult = false;
-		Transform playerTransform = GameManager.GetPlayerTransform();
-		if (playerTransform == null)
-		{
-			return false;
-		}
-		foreach (Watched fire in fires)
-		{
-			if (fire.Fi != null && (fire.Fi.transform.position - playerTransform.position).sqrMagnitude <= distance * distance)
-			{
-				nearResult = true;
-				break;
-			}
-		}
-		return nearResult;
-	}
-
-	private static void UpdateDoors(Vector3 playerPos)
-	{
-		List<Vector3> list = null;
-		foreach (Watched fire in fires)
-		{
-			if (fire.DoorZone == null || fire.Stove == null || !Watching(fire, playerPos))
-			{
-				continue;
-			}
-			if (list == null)
-			{
-				list = (Main.Settings.PullOn ? FuelOnTheMove() : new List<Vector3>());
-			}
-			bool fuelNear = false;
-			foreach (Vector3 item in list)
-			{
-				if (fire.DoorZone.Contains(item) || fire.DrawsIn(item))
-				{
-					fuelNear = true;
-					break;
-				}
-			}
-			if (FuelFlight.Approaching(fire.Stove.Pointer))
-			{
-				fuelNear = true;
-			}
-			StoveDoors.Mark(fire.Stove, fuelNear, fire.Burning);
-		}
-	}
-
-	private static List<Vector3> FuelOnTheMove()
-	{
-		List<Vector3> list = new List<Vector3>();
-		PlayerManager playerManagerComponent = GameManager.GetPlayerManagerComponent();
-		GearItem gearItem = ((playerManagerComponent != null && playerManagerComponent.IsInPlacementMode()) ? playerManagerComponent.m_ObjectToPlaceGearItem : null);
-		if (gearItem != null && IsFuel(gearItem))
-		{
-			list.Add(PointOf(gearItem));
-			foreach (GameObject item2 in PerfectPlacementBridge.Carried())
-			{
-				GearItem component = item2.GetComponent<GearItem>();
-				if (component != null && IsFuel(component))
-				{
-					list.Add(PointOf(component));
-				}
-			}
-		}
-		foreach (var item3 in thrown)
-		{
-			GearItem item = item3.item;
-			if (item != null)
-			{
-				list.Add(PointOf(item));
-			}
-		}
-		list.RemoveAll(FirewoodBins.Inside);
-		return list;
-	}
-
-	private static void CheckHeld(Vector3 playerPos)
-	{
-		PlayerManager pm = GameManager.GetPlayerManagerComponent();
-		GearItem gearItem = ((pm != null && pm.IsInPlacementMode()) ? pm.m_ObjectToPlaceGearItem : null);
-		if (gearItem == null || !IsFuel(gearItem))
-		{
-			heldKey = IntPtr.Zero;
-			hoverFed = false;
-			return;
-		}
-		bool flag = false;
-		int num = 0;
-		foreach (GameObject go in PerfectPlacementBridge.Carried())
-		{
-			GearItem component = go.GetComponent<GearItem>();
-			if (component == null || !IsFuel(component))
-			{
-				continue;
-			}
-			num++;
-			Watched watched = BurningZoneAt(PointOf(component), playerPos);
-			if (watched != null)
-			{
-				flag = true;
-				int num2 = Units(component);
-				string name2 = go.name;
-				if (CanTakeNow(watched, component))
-				{
-					Pull(watched, component);
-				}
-				string refusal;
-				bool unreadBook;
-				int num3 = FeedPieces(watched, component, () => PerfectPlacementBridge.LetGo(go), out refusal, out unreadBook);
-				if (num3 > 0)
-				{
-					hoverFed = true;
-					Verbose.Log($"{num3} x {name2} went into the {watched.Kind} from the carried group");
-				}
-				if (num3 >= num2)
-				{
-					num--;
-				}
-				if (refusal != null)
-				{
-					Refused(pm, gearItem, refusal);
-					return;
-				}
-			}
-		}
-		Watched watched2 = BurningZoneAt(PointOf(gearItem), playerPos);
-		if (watched2 == null)
-		{
-			if (!flag)
-			{
-				heldKey = IntPtr.Zero;
-				hoverFed = false;
-			}
-		}
-		else
-		{
-			if (num > 0)
-			{
-				return;
-			}
-			if (IsUnreadBook(gearItem) && Main.Settings.Books != BookRule.Burn)
-			{
-				if (Main.Settings.Books == BookRule.Ask && heldKey != gearItem.Pointer)
-				{
-					EndMove(pm, gearItem.name);
-					AskAboutBook(watched2, gearItem, held: true);
-				}
-				heldKey = gearItem.Pointer;
-				return;
-			}
-			string name = gearItem.name;
-			if (CanTakeNow(watched2, gearItem))
-			{
-				Pull(watched2, gearItem);
-			}
-			string refusal2;
-			bool unreadBook2;
-			int num4 = FeedPieces(watched2, gearItem, delegate
-			{
-				EndMove(pm, name);
-				return true;
-			}, out refusal2, out unreadBook2);
-			if (num4 > 0)
-			{
-				hoverFed = true;
-				Verbose.Log($"{num4} x {name} went into the {watched2.Kind} from the hands");
-			}
-			if (refusal2 != null)
-			{
-				Refused(pm, gearItem, refusal2);
-			}
-		}
-	}
-
-	private static void Refused(PlayerManager pm, GearItem held, string refusal)
-	{
-		if (heldKey != held.Pointer)
-		{
-			Tell(refusal);
-		}
-		heldKey = held.Pointer;
-		if (hoverFed)
-		{
-			EndMove(pm, held.name);
-		}
-		hoverFed = false;
-	}
-
-	private static Watched BurningZoneAt(Vector3 point, Vector3 playerPos)
-	{
-		if (FirewoodBins.Inside(point))
-		{
-			return null;
-		}
-		foreach (Watched fire in fires)
-		{
-			if (Watching(fire, playerPos) && fire.Takes && fire.DrawsIn(point))
-			{
-				return fire;
-			}
-		}
-		return null;
-	}
-
-	private static int FeedPieces(Watched w, GearItem gi, Func<bool> beforeLast, out string refusal, out bool unreadBook)
-	{
-		refusal = null;
-		unreadBook = false;
-		int num = 0;
-		for (int i = 0; i < 200; i++)
-		{
-			refusal = Refusal(w, gi);
-			if (refusal != null)
-			{
-				break;
-			}
-			if (IsUnreadBook(gi) && Main.Settings.Books != BookRule.Burn)
-			{
-				unreadBook = true;
-				break;
-			}
-			bool flag = Units(gi) <= 1;
-			if (flag && beforeLast != null && !beforeLast())
-			{
-				break;
-			}
-			Feed(w, gi);
-			num++;
-			if (flag)
-			{
-				break;
-			}
-		}
-		return num;
-	}
-
-	private static void EndMove(PlayerManager pm, string name)
-	{
-		if (!(pm == null) && pm.IsInPlacementMode())
-		{
-			pm.CancelPlacementMode();
-			Verbose.Log("Move of " + name + " ended at the fire");
-		}
-	}
-
-	public static void Thrown(GearItem gi)
-	{
-		thrown.Add((gi, Time.time + 4f, false));
-	}
-
-	private static void CheckThrown(Vector3 playerPos)
-	{
-		for (int num = thrown.Count - 1; num >= 0; num--)
-		{
-			var (gearItem, num2, flag) = thrown[num];
-			if (gearItem == null || Time.time > num2 || gearItem.m_InPlayerInventory || gearItem.m_InsideContainer)
-			{
-				thrown.RemoveAt(num);
-			}
-			else
-			{
-				Vector3 vector = PointOf(gearItem);
-				if (!FirewoodBins.Inside(vector))
-				{
-					foreach (Watched fire in fires)
-					{
-						if (!Watching(fire, playerPos) || !fire.Takes || !fire.DrawsIn(vector))
-						{
-							continue;
-						}
-						string text = Refusal(fire, gearItem);
-						if (text != null)
-						{
-							if (!flag)
-							{
-								Tell(text);
-							}
-							thrown[num] = (gearItem, num2, true);
-							break;
-						}
-						thrown.RemoveAt(num);
-						Verbose.Log($"Thrown {gearItem.name} caught by the {fire.Kind}");
-						if (CanTakeNow(fire, gearItem))
-						{
-							Pull(fire, gearItem);
-						}
-						FeedLying(fire, gearItem);
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	private static void Scan(Watched w)
-	{
-		Dictionary<IntPtr, GearItem> dictionary = FuelInZone(w);
-		Forget(w.LeftAlone, dictionary);
-		Forget(w.Asked, dictionary);
-		foreach (IntPtr item in new List<IntPtr>(w.LastSeen.Keys))
-		{
-			if (!dictionary.ContainsKey(item))
-			{
-				w.LastSeen.Remove(item);
-			}
-		}
-		foreach (IntPtr item2 in new List<IntPtr>(w.Told.Keys))
-		{
-			if (!dictionary.ContainsKey(item2))
-			{
-				w.Told.Remove(item2);
-			}
-		}
-		bool burning = w.Burning;
-		foreach (var (intPtr2, gearItem2) in dictionary)
-		{
-			if (!burning)
-			{
-				w.LeftAlone.Add(intPtr2);
-			}
-			else if (!w.LeftAlone.Contains(intPtr2) && w.Takes)
-			{
-				Vector3 position = gearItem2.transform.position;
-				Vector3 value;
-				bool num = w.LastSeen.TryGetValue(intPtr2, out value) && (position - value).sqrMagnitude < 0.0001f;
-				w.LastSeen[intPtr2] = position;
-				if (num && FeedLying(w, gearItem2))
-				{
-					break;
-				}
-			}
-		}
-	}
-
-	private static bool FeedLying(Watched w, GearItem gi)
-	{
-		int num = 0;
-		string name = gi.name;
-		for (int i = 0; i < 200; i++)
-		{
-			string text = Refusal(w, gi);
-			if (text != null)
-			{
-				if (!w.Told.TryGetValue(gi.Pointer, out var value) || value != text)
-				{
-					Tell(text);
-				}
-				w.Told[gi.Pointer] = text;
-				break;
-			}
-			if (IsUnreadBook(gi) && Main.Settings.Books != BookRule.Burn)
-			{
-				if (Main.Settings.Books == BookRule.Ask)
-				{
-					AskAboutBook(w, gi, held: false);
-				}
-				break;
-			}
-			bool num2 = Units(gi) <= 1;
-			Feed(w, gi);
-			num++;
-			if (num2)
-			{
-				break;
-			}
-		}
-		if (num > 1)
-		{
-			Verbose.Log($"{num} x {name} went into the {w.Kind} at once");
-		}
-		return num > 0;
-	}
-
-	private static void Forget(HashSet<IntPtr> set, Dictionary<IntPtr, GearItem> inZone)
-	{
-		set.RemoveWhere((IntPtr key) => !inZone.ContainsKey(key));
-	}
-
-	private static Dictionary<IntPtr, GearItem> FuelInZone(Watched w)
-	{
-		Dictionary<IntPtr, GearItem> dictionary = new Dictionary<IntPtr, GearItem>();
-		Il2CppReferenceArray<Collider> il2CppReferenceArray = Physics.OverlapSphere(w.Zone.Center, w.Zone.Reach, gearMask, QueryTriggerInteraction.Collide);
-		PlayerManager playerManagerComponent = GameManager.GetPlayerManagerComponent();
-		HashSet<IntPtr> hashSet = null;
-		if (playerManagerComponent != null && playerManagerComponent.IsInPlacementMode())
-		{
-			hashSet = new HashSet<IntPtr>();
-			foreach (GameObject item in PerfectPlacementBridge.Carried())
-			{
-				hashSet.Add(item.Pointer);
-			}
-		}
-		foreach (Collider item2 in il2CppReferenceArray)
-		{
-			GearItem gearItem = ((item2 != null) ? item2.GetComponentInParent<GearItem>() : null);
-			if (!(gearItem == null) && !dictionary.ContainsKey(gearItem.Pointer) && IsLooseFuel(gearItem, playerManagerComponent) && (hashSet == null || !hashSet.Contains(gearItem.gameObject.Pointer)))
-			{
-				Vector3 vector = PointOf(gearItem);
-				if (w.Zone.Contains(vector) && !FirewoodBins.Inside(vector))
-				{
-					dictionary[gearItem.Pointer] = gearItem;
-				}
-			}
-		}
-		return dictionary;
-	}
-
-	private static Vector3 PointOf(GearItem gi)
-	{
-		foreach (Collider componentsInChild in gi.GetComponentsInChildren<Collider>(includeInactive: false))
-		{
-			if (componentsInChild != null && componentsInChild.enabled && !componentsInChild.isTrigger)
-			{
-				return componentsInChild.bounds.center;
-			}
-		}
-		return gi.transform.position;
-	}
-
-	private static (Vector3 centre, Quaternion rotation, Vector3 half) BoxOf(GearItem gi)
-	{
-		foreach (Collider componentsInChild in gi.GetComponentsInChildren<Collider>(includeInactive: false))
-		{
-			if (!(componentsInChild == null) && componentsInChild.enabled && !componentsInChild.isTrigger)
-			{
-				Transform transform = componentsInChild.transform;
-				Vector3 lossyScale = transform.lossyScale;
-				lossyScale = new Vector3(Math.Abs(lossyScale.x), Math.Abs(lossyScale.y), Math.Abs(lossyScale.z));
-				BoxCollider boxCollider = componentsInChild.TryCast<BoxCollider>();
-				if (boxCollider != null)
-				{
-					return (centre: transform.TransformPoint(boxCollider.center), rotation: transform.rotation, half: Vector3.Scale(boxCollider.size * 0.5f, lossyScale));
-				}
-				CapsuleCollider capsuleCollider = componentsInChild.TryCast<CapsuleCollider>();
-				if (capsuleCollider != null)
-				{
-					Vector3 a = Vector3.one * capsuleCollider.radius;
-					a[capsuleCollider.direction] = Math.Max(capsuleCollider.height * 0.5f, capsuleCollider.radius);
-					return (centre: transform.TransformPoint(capsuleCollider.center), rotation: transform.rotation, half: Vector3.Scale(a, lossyScale));
-				}
-				MeshCollider meshCollider = componentsInChild.TryCast<MeshCollider>();
-				if (meshCollider != null && meshCollider.sharedMesh != null)
-				{
-					Bounds bounds = meshCollider.sharedMesh.bounds;
-					return (centre: transform.TransformPoint(bounds.center), rotation: transform.rotation, half: Vector3.Scale(bounds.extents, lossyScale));
-				}
-				return (centre: componentsInChild.bounds.center, rotation: Quaternion.identity, half: componentsInChild.bounds.extents);
-			}
-		}
-		return (centre: gi.transform.position, rotation: Quaternion.identity, half: Vector3.one * 0.1f);
-	}
-
-	public static bool IsFuel(GearItem gi)
-	{
-		if (gi.m_FuelSourceItem != null)
-		{
-			if (gi.m_FuelSourceItem.m_IsTinder)
-			{
-				return TinderIsFuel;
-			}
-			return true;
-		}
-		return false;
-	}
-
-	private static bool IsLooseFuel(GearItem gi, PlayerManager pm)
-	{
-		if (!IsFuel(gi))
-		{
-			return false;
-		}
-		if (gi.m_InPlayerInventory || gi.m_InsideContainer || !gi.gameObject.activeInHierarchy)
-		{
-			return false;
-		}
-		if (gi.IsAttachedToPlacePoint())
-		{
-			return false;
-		}
-		if (pm != null && (Same(pm.m_ObjectToPlaceGearItem, gi) || Same(pm.m_ItemInHands, gi)))
-		{
-			return false;
-		}
-		return true;
-	}
-
-	private static bool Same(GearItem a, GearItem b)
-	{
-		if (a != null && b != null)
-		{
-			return a.Pointer == b.Pointer;
-		}
-		return false;
-	}
-
-	private static int Units(GearItem gi)
-	{
-		if (!(gi.m_StackableItem != null))
-		{
-			return 1;
-		}
-		return gi.m_StackableItem.m_Units;
-	}
-
-	private static string Refusal(Watched w, GearItem gi)
-	{
-		FuelSourceItem fuelSourceItem = gi.m_FuelSourceItem;
-		Fire fire = w.Fire;
-		bool flag = w.Kind == FireKind.Forge;
-		if (fire.FireShouldBlowOutFromWind())
-		{
-			return Localization.Get("GAMEPLAY_TooWindyToAddFuel");
-		}
-		if (!flag || fuelSourceItem.m_FireAgeMinutesBeforeAdding <= 0f)
-		{
-			float num = fuelSourceItem.GetModifiedBurnDurationHours(gi.GetNormalizedCondition()) + fire.GetRemainingLifeTimeSeconds() / 3600f;
-			FireManager fireManagerComponent = GameManager.GetFireManagerComponent();
-			if (fireManagerComponent != null && num > fireManagerComponent.m_MaxDurationHoursOfFire)
-			{
-				return Localization.Get("GAMEPLAY_CannotAddMoreFuel");
-			}
-		}
-		int num2 = Mathf.CeilToInt(fuelSourceItem.m_FireAgeMinutesBeforeAdding - fire.m_ElapsedOnTODSeconds / 60f);
-		if (num2 >= 1)
-		{
-			return Localization.Get("GAMEPLAY_BurnTimeNeededForCoal").Replace("{minutes}", num2.ToString());
-		}
-		return null;
-	}
-
-	private static bool CanTakeNow(Watched w, GearItem gi)
-	{
-		if (Refusal(w, gi) == null)
-		{
-			if (IsUnreadBook(gi))
-			{
-				return Main.Settings.Books == BookRule.Burn;
-			}
-			return true;
-		}
-		return false;
-	}
-
-	private static void Pull(Watched w, GearItem gi, FirewoodBins.ExitPlan found = null)
-	{
-		Vector3 vector = PointOf(gi);
-		(Vector3 centre, Quaternion rotation, Vector3 half) tuple = BoxOf(gi);
-		Vector3 item = tuple.centre;
-		Quaternion item2 = tuple.rotation;
-		Vector3 item3 = tuple.half;
-		FirewoodBins.ExitPlan exitPlan = found ?? (FirewoodBins.InBin(vector) ? FirewoodBins.ExitPath(item, item2, item3, TowardOf(w)) : null);
-		if (exitPlan?.Points != null && exitPlan.Points.Count > 0)
-		{
-			vector = exitPlan.Points[exitPlan.Points.Count - 1];
-		}
-		Quaternion? turnTo = ((exitPlan != null && exitPlan.TurnPoints > 0) ? new Quaternion?(exitPlan.Rotation * Quaternion.Inverse(item2) * gi.transform.rotation) : null);
-		if (w.Funnel != null && w.Funnel.IsCone)
-		{
-			Fly(gi, w, exitPlan, turnTo, StovePath(w.Funnel, vector), 2);
-		}
-		else if (FireZone.IsBarrel(w.Fi))
-		{
-			Fly(gi, w, exitPlan, turnTo, BarrelPath(w.Fi.transform, vector), 2);
-		}
-		else if (w.Kind == FireKind.Campfire)
-		{
-			Vector3 vector2 = w.Zone.Frame.position + Vector3.up * 0.25f;
-			Vector3 item4 = (vector + vector2) / 2f;
-			item4.y = Math.Max(vector.y, vector2.y) + 0.4f;
-			Fly(gi, w, exitPlan, turnTo, new List<Vector3> { item4, vector2 }, 1);
-		}
-		else
-		{
-			Vector3 center = w.Zone.Center;
-			Fly(gi, w, exitPlan, turnTo, new List<Vector3>
-			{
-				(vector + center) / 2f + Vector3.up * 0.3f,
-				center
-			}, 1);
-		}
-	}
-
-	private static Vector3 TowardOf(Watched w)
-	{
-		if (w.Funnel == null)
-		{
-			return w.Zone.Center;
-		}
-		return w.Funnel.Center;
-	}
-
-	private static void Fly(GearItem gi, Watched w, FirewoodBins.ExitPlan exit, Quaternion? turnTo, List<Vector3> path, int freeEnd)
-	{
-		List<Vector3> list = new List<Vector3>();
-		int valueOrDefault = (exit?.Points?.Count).GetValueOrDefault();
-		if (valueOrDefault > 0)
-		{
-			list.AddRange(exit.Points);
-		}
-		list.AddRange(path);
-		ObjectAnim objectAnim = ((w.Stove != null) ? w.Stove.m_ObjectAnim : null);
-		Transform transform = ((objectAnim != null && objectAnim.m_Target != null) ? objectAnim.m_Target.transform : null);
-		if (FuelFlight.Start(gi, list, Main.Settings.PullSpeed, (w.Stove != null) ? w.Stove.Pointer : IntPtr.Zero, w.Fi.gameObject, freeEnd, valueOrDefault, turnTo, turnTo.HasValue ? exit.TurnPoints : 0, FirewoodBins.RootOf(PointOf(gi)), transform))
-		{
-			soundOnArrivalFrame = Time.frameCount;
-		}
-	}
-
-	public static void FeedSound(GameObject at)
-	{
-		if (!(at == null) && !(Time.time - lastSound <= 0.2f) && InterfaceManager.TryGetPanel<Panel_FeedFire>(out var panel) && !(panel == null) && !string.IsNullOrEmpty(panel.m_FeedFireAudio))
-		{
-			GameAudioManager.PlaySound(panel.m_FeedFireAudio, at);
-			lastSound = Time.time;
-		}
-	}
-
-	private static List<Vector3> BarrelPath(Transform barrel, Vector3 from)
-	{
-		Vector3 position = barrel.position;
-		Vector3 vector = new Vector3(from.x - position.x, 0f, from.z - position.z);
-		vector = ((vector.sqrMagnitude > 0.0001f) ? vector.normalized : barrel.forward);
-		Vector3 up = Vector3.up;
-		return new List<Vector3>
-		{
-			position + vector * 0.45f + up * 1.35f,
-			position + vector * 0.27f + up * 1.15f,
-			position + vector * 0.22f + up * 0.55f
-		};
-	}
-
-	private static List<Vector3> StovePath(FireZone funnel, Vector3 from)
-	{
-		Quaternion yaw = funnel.Yaw;
-		Vector3 origin = funnel.Frame.position;
-		Vector3 offset = funnel.Offset;
-		Vector3 normalized = new Vector3(funnel.Axis.x, 0f, funnel.Axis.z).normalized;
-		Vector3 vector = funnel.Local(from);
-		List<Vector3> list = new List<Vector3>();
-		float num = Vector3.Dot(vector - offset, normalized);
-		Vector3 rhs = Vector3.Cross(Vector3.up, normalized);
-		float value = Vector3.Dot(vector - offset, rhs);
-		if (num < 0.7f || Math.Abs(value) > 0.25f)
-		{
-			Vector3 local2 = vector + normalized * Math.Max(0f, 0.7f - num);
-			local2.y = Math.Max(vector.y, offset.y - 0.2f);
-			list.Add(World(local2));
-		}
-		list.Add(World(offset + normalized * 0.35f));
-		list.Add(World(offset));
-		list.Add(World(offset - normalized * 0.3f));
-		return list;
-		Vector3 World(Vector3 local)
-		{
-			return origin + yaw * local;
-		}
-	}
-
-	private static bool IsUnreadBook(GearItem gi)
-	{
-		ResearchItem researchItem = gi.m_ResearchItem;
-		if (researchItem != null)
-		{
-			return researchItem.m_ElapsedHours < researchItem.GetTimeRequirementHoursPrecise();
-		}
-		return false;
-	}
-
-	private static void Tell(string message)
-	{
-		if (Main.Settings.messages)
-		{
-			HUDMessage.AddMessage(message);
-		}
-	}
-
-	private static void AskAboutBook(Watched w, GearItem gi, bool held)
-	{
-		if (!w.Asked.Add(gi.Pointer) || !InterfaceManager.TryGetPanel<Panel_Confirmation>(out var panel) || panel == null)
-		{
-			return;
-		}
-		Action @delegate = delegate
-		{
-			try
-			{
-				if (!(gi == null) && !(w.Fi == null) && w.Burning && (held || (IsLooseFuel(gi, GameManager.GetPlayerManagerComponent()) && w.Zone.Contains(PointOf(gi)))))
-				{
-					string text = Refusal(w, gi);
-					if (text != null)
-					{
-						Tell(text);
-					}
-					else
-					{
-						Feed(w, gi);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				Once.Warn("book", "Burning the book failed: " + ex);
-			}
-		};
-		panel.ShowBurnResearchNotification(DelegateSupport.ConvertDelegate<Panel_Confirmation.CallbackDelegate>(@delegate));
-		Verbose.Log("Asked about burning the unread book " + gi.name);
-	}
-
-	private static void Feed(Watched w, GearItem gi)
-	{
-		if (soundOnArrivalFrame != Time.frameCount)
-		{
-			FeedSound(w.Fi.gameObject);
-		}
-		w.Fire.AddFuel(gi, w.Kind == FireKind.Forge);
-		int num = Units(gi);
-		bool inPlayerInventory = gi.m_InPlayerInventory;
-		Verbose.Log($"{gi.name} went into the {w.Kind} '{w.Fi.gameObject.name}' ({num} piece(s), {(inPlayerInventory ? "carried" : "in the world")}); fire now {w.Fire.GetRemainingLifeTimeHours():0.00} h");
-		if (inPlayerInventory)
-		{
-			GameManager.GetPlayerManagerComponent().ConsumeUnitFromInventory(gi.gameObject);
-		}
-		else if (num > 1)
-		{
-			gi.m_StackableItem.m_Units = num - 1;
-		}
-		else
-		{
-			GearManager.DestroyGearObject(gi);
-		}
-	}
+    /// <summary>
+    /// Fuel put into the zone of a burning fire goes into the fire, as if added from the game's "Add fuel" menu, with the
+    /// same rules: not in strong wind, not past the longest burn time, coal only once the fire is old enough, unread skill
+    /// books per setting. A stack goes in at once, as many pieces as the fire takes.
+    ///  - Fuel the player is moving goes in straight from the hands, checked every frame; the move goes on with what is
+    ///    left, and is cancelled only when the fire stops taking it while something is still held.
+    ///  - Fuel lying in the zone goes in once it rests there; what can't go in yet stays and is tried again.
+    ///    Fuel that already lay there while the fire was out is left alone (until moved out and back in).
+    /// </summary>
+    internal static partial class FuelFeeder
+    {
+        private const float ScanEvery = 0.1f;       // s, items lying in the zones
+        private const float FiresEvery = 3f;        // s, look for new / removed fires
+        private const float NearPlayer = 25f;       // m, fires farther away are not watched
+        private const float SettledMove = 0.01f;    // m between two scans: the item came to rest
+
+        private sealed class Watched
+        {
+            public FireplaceInteraction Fi;
+            public Fire Fire;
+            public FireKind Kind;
+            public FireZone Zone;
+            public FireZone DoorZone;   // fuel coming into it opens the stove door (null: no door handled)
+            public FireZone Funnel;     // fuel on the move is drawn in from here (null: Zone)
+            public FireZone[] Sides;    // beside a stove, left and right: fuel on the move is drawn in from there too
+            public WoodStove Stove;
+
+            /// <summary>Fuel on the move (held, carried, thrown) at this point goes in: funnel or sides, else the fire's zone.</summary>
+            public bool DrawsIn(Vector3 p)
+            {
+                if (Funnel == null) return Zone.Contains(p);
+                if (Funnel.Contains(p)) return true;
+                if (Sides != null) foreach (var s in Sides) if (s.Contains(p)) return true;
+                return false;
+            }
+
+            public readonly HashSet<IntPtr> LeftAlone = new();              // lay there while the fire was out
+            public readonly Dictionary<IntPtr, Vector3> LastSeen = new();
+            public readonly HashSet<IntPtr> Asked = new();                  // unread book: question shown
+            public readonly Dictionary<IntPtr, string> Told = new();        // last message shown per item
+
+            public bool Burning => Fire.GetFireState() == FireState.FullBurn;
+
+            /// <summary>Burning, and a stove with a door handled here has it open (it swallows fuel only through it).</summary>
+            public bool Takes => Burning && (DoorZone == null || Stove == null || Stove.m_Open);
+        }
+
+        private static readonly List<Watched> fires = new();
+        private static float nextScan, nextFires;
+        private static int gearMask = -1;
+
+        public static void Reset()
+        {
+            fires.Clear();
+            nextScan = nextFires = 0f;
+            heldKey = IntPtr.Zero;
+            thrown.Clear();
+            StoveDoors.Reset();
+            FuelFlight.Reset();
+            StoveLayout.Reset();
+        }
+
+        public static void Update()
+        {
+            var player = GameManager.GetPlayerTransform();
+            if (player == null) return;
+            float now = Time.time;
+            if (now >= nextFires)
+            {
+                nextFires = now + FiresEvery;
+                RefreshFires();
+            }
+
+            try
+            {
+                FuelFlight.Update();
+                UpdateDoors(player.position);
+                if (Main.Settings.AutoOn) AutoFeedTick(player.position);
+                if (Main.Settings.PullOn) CheckHeld(player.position);
+                if (thrown.Count > 0) { if (Main.Settings.PullOn) CheckThrown(player.position); else thrown.Clear(); }
+            }
+            catch (Exception e)
+            {
+                Once.Warn("held:" + e.GetType().Name, "Checking the item being moved or thrown failed: " + e);
+            }
+
+            if (now < nextScan || !Main.Settings.PullOn) return;
+            nextScan = now + ScanEvery;
+            if (gearMask < 0) gearMask = 1 << LayerMask.NameToLayer("Gear");
+            foreach (var w in fires)
+            {
+                try
+                {
+                    if (Watching(w, player.position) && PullsIn(w.Fi)) Scan(w);
+                }
+                catch (Exception e)
+                {
+                    Once.Warn("scan:" + e.GetType().Name, "Watching a fire failed: " + e);
+                }
+            }
+        }
+
+        public static IEnumerable<(FireplaceInteraction fi, FireKind kind, FireZone zone, FireZone door, FireZone funnel, FireZone[] sides)> Fires()
+        {
+            foreach (var w in fires)
+                if (w.Fi != null) yield return (w.Fi, w.Kind, w.Zone, w.DoorZone, w.Funnel, w.Sides);
+        }
+
+        private static bool Watching(Watched w, Vector3 playerPos) =>
+            w.Fi != null && w.Fire != null && Enabled(w.Kind) &&
+            (w.Fi.transform.position - playerPos).sqrMagnitude <= NearPlayer * NearPlayer;
+
+        private static bool Enabled(FireKind kind) => kind switch
+        {
+            FireKind.Campfire => Main.Settings.campfires,
+            FireKind.Fireplace => Main.Settings.fireplaces,
+            FireKind.Stove => Main.Settings.stoves,
+            FireKind.Forge => Main.Settings.forges,
+            _ => false,
+        };
+
+        /// <summary>Settings changed (funnel size): zones of the watched fires are built again, what lies there is kept.</summary>
+        public static void RebuildZones()
+        {
+            foreach (var w in fires)
+            {
+                if (w.Fi == null) continue;
+                w.Zone = FireZone.For(w.Fi, w.Kind);
+                w.DoorZone = FireZone.DoorTrigger(w.Fi);
+                w.Funnel = FireZone.Funnel(w.Fi);
+                w.Sides = FireZone.Sides(w.Fi);
+            }
+        }
+
+        private static void RefreshFires()
+        {
+            var found = UnityEngine.Object.FindObjectsOfType<FireplaceInteraction>();
+            var keep = new List<Watched>();
+            foreach (var fi in found)
+            {
+                if (fi == null || fi.Fire == null) continue;
+                var known = fires.Find(w => w.Fi != null && w.Fi.Pointer == fi.Pointer);
+                if (known == null)
+                {
+                    var kind = FireZone.KindOf(fi);
+                    known = new Watched
+                    {
+                        Fi = fi, Fire = fi.Fire, Kind = kind, Zone = FireZone.For(fi, kind),
+                        DoorZone = FireZone.DoorTrigger(fi), Funnel = FireZone.Funnel(fi), Sides = FireZone.Sides(fi), Stove = fi.TryCast<WoodStove>(),
+                    };
+                    Verbose.Log($"Watching {kind} '{fi.gameObject.name}': {known.Zone}");
+                    // The ammo workbench has a fire of its own (AmmoWorkBench.m_Fire): its make-up, to fit its zones.
+                    var bench = StoveLayout.ModelRoot(fi.transform).GetComponentInChildren<AmmoWorkBench>(true);
+                    if (bench != null)
+                        Main.Log.Msg($"Ammo workbench fire '{fi.gameObject.name}' ({kind}, door {(known.Stove != null && known.Stove.m_ObjectAnim != null ? "animated" : "none")}), " +
+                                     $"the bench: {FirewoodBins.Describe(bench.gameObject)}");
+                }
+                keep.Add(known);
+            }
+            fires.Clear();
+            fires.AddRange(keep);
+        }
+
+        private static int nearFrame = -1;
+        private static float nearDistance;
+        private static bool nearResult;
+
+        /// <summary>Is any fire (lit or not, any kind) within this distance of the player? Answered once per frame.</summary>
+        public static bool FireNearPlayer(float distance)
+        {
+            if (nearFrame == Time.frameCount && nearDistance == distance) return nearResult;
+            nearFrame = Time.frameCount;
+            nearDistance = distance;
+            nearResult = false;
+            var player = GameManager.GetPlayerTransform();
+            if (player == null) return false;
+            foreach (var w in fires)
+                if (w.Fi != null && (w.Fi.transform.position - player.position).sqrMagnitude <= distance * distance)
+                {
+                    nearResult = true;
+                    break;
+                }
+            return nearResult;
+        }
+
+        // --- stove doors ---
+
+        /// <summary>Fuel coming near a burning stove (held, carried in a group or thrown) opens its door wide.</summary>
+        private static void UpdateDoors(Vector3 playerPos)
+        {
+            List<Vector3> points = null;
+            foreach (var w in fires)
+            {
+                if (w.DoorZone == null || w.Stove == null || !Watching(w, playerPos)) continue;
+                if (points == null)
+                {
+                    points = Main.Settings.PullOn ? FuelOnTheMove() : new List<Vector3>();
+                    // Fuel already flying in (auto-feed from a zone or a bin) opens the door on its way, see below.
+                    // (fuel flying in opens the door itself, see below)
+                }
+                bool near = false;
+                if (PullsIn(w.Fi)) foreach (var p in points)
+                    // In the funnel counts too: fuel there is on its way in.
+                    if (w.DoorZone.Contains(p) || w.DrawsIn(p)) { near = true; break; }
+                // Fuel flying into this stove, past part of its way: the door opens before it arrives.
+                if (FuelFlight.Approaching(w.Stove.Pointer)) near = true;
+                StoveDoors.Mark(w.Stove, near, w.Burning);
+            }
+        }
+
+        private static List<Vector3> FuelOnTheMove()
+        {
+            var points = new List<Vector3>();
+            var pm = GameManager.GetPlayerManagerComponent();
+            var held = pm != null && pm.IsInPlacementMode() ? pm.m_ObjectToPlaceGearItem : null;
+            if (held != null && IsFuel(held))
+            {
+                points.Add(PointOf(held));
+                foreach (var go in PerfectPlacementBridge.Carried())
+                {
+                    var gi = go.GetComponent<GearItem>();
+                    if (gi != null && IsFuel(gi)) points.Add(PointOf(gi));
+                }
+            }
+            foreach (var (gi, _, _) in thrown)
+                if (gi != null) points.Add(PointOf(gi));
+            // Fuel going into a bin near a stove doesn't open its door.
+            points.RemoveAll(FirewoodBins.Inside);
+            return points;
+        }
+
+        // --- the item the player is moving (and its PerfectPlacement group) ---
+
+        private static IntPtr heldKey;      // the held item a refusal was told for (no message again while it stays)
+        private static bool hoverFed;       // something went in during this move over a fire
+
+        /// <summary>
+        /// Pieces go in straight from the hands, checked every frame. With a PerfectPlacement group, the carried items in
+        /// the zone go in first, one by one; the held one goes last, once nothing else is carried. The move goes on with
+        /// what is left; it ends when nothing is left, and is cancelled when the fire stops taking fuel after some went in
+        /// (what is left goes back where it came from). When nothing could go in at all, the player keeps moving (e.g. past
+        /// a fire that is full).
+        /// </summary>
+        private static void CheckHeld(Vector3 playerPos)
+        {
+            var pm = GameManager.GetPlayerManagerComponent();
+            var held = pm != null && pm.IsInPlacementMode() ? pm.m_ObjectToPlaceGearItem : null;
+            if (held == null || !IsFuel(held))
+            {
+                heldKey = IntPtr.Zero;
+                hoverFed = false;
+                return;
+            }
+
+            bool anyInZone = false;
+            int membersLeft = 0;
+            foreach (var go in PerfectPlacementBridge.Carried())
+            {
+                var gi = go.GetComponent<GearItem>();
+                if (gi == null || !IsFuel(gi)) continue;
+                membersLeft++;
+                var w = BurningZoneAt(PointOf(gi), playerPos);
+                if (w == null) continue;
+                anyInZone = true;
+                // Taken out of the group before its last piece burns: PerfectPlacement moves its members every frame.
+                int before = Units(gi);
+                string goName = go.name;
+                if (CanTakeNow(w, gi)) Pull(w, gi);
+                int fed = FeedPieces(w, gi, () => PerfectPlacementBridge.LetGo(go), out string refusal, out bool book);
+                if (fed > 0)
+                {
+                    hoverFed = true;
+                    Verbose.Log($"{fed} x {goName} went into the {w.Kind} from the carried group");
+                }
+                if (fed >= before) membersLeft--; // all of it burnt
+                if (refusal != null)
+                {
+                    Refused(pm, held, refusal);
+                    return;
+                }
+                if (book) continue; // an unread book in a group just stays in it
+            }
+
+            var at = BurningZoneAt(PointOf(held), playerPos);
+            if (at == null)
+            {
+                if (!anyInZone)
+                {
+                    heldKey = IntPtr.Zero; // away from every fire: a full fire may say so again next time
+                    hoverFed = false;
+                }
+                return;
+            }
+            if (membersLeft > 0) return; // the held one goes last, it ends the move
+
+            if (IsUnreadBook(held) && Main.Settings.Books != BookRule.Burn)
+            {
+                if (Main.Settings.Books == BookRule.Ask && heldKey != held.Pointer)
+                {
+                    EndMove(pm, held.name);
+                    AskAboutBook(at, held, true);
+                }
+                heldKey = held.Pointer;
+                return;
+            }
+
+            string name = held.name;
+            // The last piece: the move has to end first, the held object is going away.
+            if (CanTakeNow(at, held)) Pull(at, held);
+            int fedHeld = FeedPieces(at, held, () => { EndMove(pm, name); return true; }, out string heldRefusal, out _);
+            if (fedHeld > 0)
+            {
+                hoverFed = true;
+                Verbose.Log($"{fedHeld} x {name} went into the {at.Kind} from the hands");
+            }
+            if (heldRefusal != null) Refused(pm, held, heldRefusal);
+        }
+
+        /// <summary>The fire can't take more: say it once; if some went in during this move, the move is cancelled.</summary>
+        private static void Refused(PlayerManager pm, GearItem held, string refusal)
+        {
+            if (heldKey != held.Pointer) Tell(refusal);
+            heldKey = held.Pointer;
+            if (hoverFed) EndMove(pm, held.name);
+            hoverFed = false;
+        }
+
+        private static Watched BurningZoneAt(Vector3 point, Vector3 playerPos)
+        {
+            // Being put into a bin that stands in a fire's zone: it goes into the bin.
+            if (FirewoodBins.Inside(point)) return null;
+            foreach (var w in fires)
+                if (Watching(w, playerPos) && w.Takes && PullsIn(w.Fi) && w.DrawsIn(point)) return w;
+            return null;
+        }
+
+        /// <summary>
+        /// As many pieces as the fire takes, each checked by the game's rules. <paramref name="beforeLast"/> runs before the
+        /// last piece (the item goes away with it); if it returns false, the last piece stays.
+        /// </summary>
+        private static int FeedPieces(Watched w, GearItem gi, Func<bool> beforeLast, out string refusal, out bool unreadBook)
+        {
+            refusal = null;
+            unreadBook = false;
+            int fed = 0;
+            for (int guard = 0; guard < 200; guard++)
+            {
+                refusal = Refusal(w, gi);
+                if (refusal != null) break;
+                if (IsUnreadBook(gi) && Main.Settings.Books != BookRule.Burn)
+                {
+                    unreadBook = true;
+                    break;
+                }
+                bool last = Units(gi) <= 1;
+                if (last && beforeLast != null && !beforeLast()) break;
+                Feed(w, gi);
+                fed++;
+                if (last) break;
+            }
+            return fed;
+        }
+
+        private static void EndMove(PlayerManager pm, string name)
+        {
+            if (pm == null || !pm.IsInPlacementMode()) return;
+            pm.CancelPlacementMode();
+            Verbose.Log($"Move of {name} ended at the fire");
+        }
+
+        // --- thrown items ---
+
+        private const float ThrownWatch = 4f; // s, long enough to fly, bounce and roll
+
+        private static readonly List<(GearItem item, float until, bool told)> thrown = new();
+
+        /// <summary>Called when the player throws fuel (a torch): it is watched for a few seconds, every frame.</summary>
+        public static void Thrown(GearItem gi) => thrown.Add((gi, Time.time + ThrownWatch, false));
+
+        /// <summary>Thrown fuel goes in as soon as it is in a zone, still flying or bouncing.</summary>
+        private static void CheckThrown(Vector3 playerPos)
+        {
+            for (int i = thrown.Count - 1; i >= 0; i--)
+            {
+                var (gi, until, told) = thrown[i];
+                if (gi == null || Time.time > until || gi.m_InPlayerInventory || gi.m_InsideContainer)
+                {
+                    thrown.RemoveAt(i);
+                    continue;
+                }
+                var point = PointOf(gi);
+                if (FirewoodBins.Inside(point)) continue; // landed in a bin: the bin's
+                foreach (var w in fires)
+                {
+                    if (!Watching(w, playerPos) || !w.Takes || !PullsIn(w.Fi) || !w.DrawsIn(point)) continue;
+                    string refusal = Refusal(w, gi);
+                    if (refusal != null)
+                    {
+                        // Lying there it is tried again by the scan; say it once.
+                        if (!told) Tell(refusal);
+                        thrown[i] = (gi, until, true);
+                        break;
+                    }
+                    thrown.RemoveAt(i);
+                    Verbose.Log($"Thrown {gi.name} caught by the {w.Kind}");
+                    if (CanTakeNow(w, gi)) Pull(w, gi);
+                    FeedLying(w, gi);
+                    break;
+                }
+            }
+        }
+
+        // --- items lying in a zone ---
+
+        private static void Scan(Watched w)
+        {
+            var inZone = FuelInZone(w);
+            // Forget items that left the zone: put back in, they count as new.
+            Forget(w.LeftAlone, inZone);
+            Forget(w.Asked, inZone);
+            foreach (var key in new List<IntPtr>(w.LastSeen.Keys)) if (!inZone.ContainsKey(key)) w.LastSeen.Remove(key);
+            foreach (var key in new List<IntPtr>(w.Told.Keys)) if (!inZone.ContainsKey(key)) w.Told.Remove(key);
+
+            bool burning = w.Burning;
+            foreach (var (key, gi) in inZone)
+            {
+                if (!burning)
+                {
+                    w.LeftAlone.Add(key);
+                    continue;
+                }
+                if (w.LeftAlone.Contains(key) || !w.Takes) continue; // a closed stove door: wait
+
+                // Only items at rest: not one flying through or still rolling.
+                var pos = gi.transform.position;
+                bool settled = w.LastSeen.TryGetValue(key, out var last) && (pos - last).sqrMagnitude < SettledMove * SettledMove;
+                w.LastSeen[key] = pos;
+                if (!settled) continue;
+
+                if (FeedLying(w, gi)) break;
+            }
+        }
+
+        /// <summary>As many pieces of the item as the fire takes. True if any went in.</summary>
+        private static bool FeedLying(Watched w, GearItem gi)
+        {
+            int fed = 0;
+            string name = gi.name;
+            for (int guard = 0; guard < 200; guard++)
+            {
+                string refusal = Refusal(w, gi);
+                if (refusal != null)
+                {
+                    // The same message once per item while it lies there (it is tried again every scan).
+                    if (!w.Told.TryGetValue(gi.Pointer, out var told) || told != refusal) Tell(refusal);
+                    w.Told[gi.Pointer] = refusal;
+                    break;
+                }
+                if (IsUnreadBook(gi) && Main.Settings.Books != BookRule.Burn)
+                {
+                    if (Main.Settings.Books == BookRule.Ask) AskAboutBook(w, gi, false);
+                    break;
+                }
+
+                bool last = Units(gi) <= 1;
+                Feed(w, gi);
+                fed++;
+                if (last) break;
+            }
+            if (fed > 1) Verbose.Log($"{fed} x {name} went into the {w.Kind} at once");
+            return fed > 0;
+        }
+
+        private static void Forget(HashSet<IntPtr> set, Dictionary<IntPtr, GearItem> inZone) =>
+            set.RemoveWhere(key => !inZone.ContainsKey(key));
+
+        /// <summary>Fuel lying in the zone, by object pointer.</summary>
+        private static Dictionary<IntPtr, GearItem> FuelInZone(Watched w)
+        {
+            var result = new Dictionary<IntPtr, GearItem>();
+            var hits = Physics.OverlapSphere(w.Zone.Center, w.Zone.Reach, gearMask, QueryTriggerInteraction.Collide);
+            var pm = GameManager.GetPlayerManagerComponent();
+            // Items PerfectPlacement is moving as a group are handled with the held one (CheckHeld).
+            HashSet<IntPtr> carried = null;
+            if (pm != null && pm.IsInPlacementMode())
+            {
+                carried = new HashSet<IntPtr>();
+                foreach (var go in PerfectPlacementBridge.Carried()) carried.Add(go.Pointer);
+            }
+            foreach (var c in hits)
+            {
+                var gi = c != null ? c.GetComponentInParent<GearItem>() : null;
+                if (gi == null || result.ContainsKey(gi.Pointer) || !IsLooseFuel(gi, pm)) continue;
+                if (carried != null && carried.Contains(gi.gameObject.Pointer)) continue;
+                var p = PointOf(gi);
+                if (!w.Zone.Contains(p) || FirewoodBins.Inside(p)) continue;
+                result[gi.Pointer] = gi;
+            }
+            return result;
+        }
+
+        /// <summary>The item's middle: its collider's box centre (pivots may sit at the bottom or off to one side).</summary>
+        private static Vector3 PointOf(GearItem gi)
+        {
+            foreach (var c in gi.GetComponentsInChildren<Collider>(false))
+                if (c != null && c.enabled && !c.isTrigger) return c.bounds.center;
+            return gi.transform.position;
+        }
+
+        /// <summary>
+        /// The item's box as it lies: its collider's own box turned with it (a box, a capsule or a mesh's bounds; else
+        /// its world box), half its size in its own axes. 10 cm when it has none.
+        /// </summary>
+        private static (Vector3 centre, Quaternion rotation, Vector3 half) BoxOf(GearItem gi)
+        {
+            foreach (var c in gi.GetComponentsInChildren<Collider>(false))
+            {
+                if (c == null || !c.enabled || c.isTrigger) continue;
+                var t = c.transform;
+                var scale = t.lossyScale;
+                scale = new Vector3(Math.Abs(scale.x), Math.Abs(scale.y), Math.Abs(scale.z));
+                var box = c.TryCast<BoxCollider>();
+                if (box != null) return (t.TransformPoint(box.center), t.rotation, Vector3.Scale(box.size * 0.5f, scale));
+                var capsule = c.TryCast<CapsuleCollider>();
+                if (capsule != null)
+                {
+                    var h = Vector3.one * capsule.radius;
+                    h[capsule.direction] = Math.Max(capsule.height * 0.5f, capsule.radius);
+                    return (t.TransformPoint(capsule.center), t.rotation, Vector3.Scale(h, scale));
+                }
+                var mesh = c.TryCast<MeshCollider>();
+                if (mesh != null && mesh.sharedMesh != null)
+                {
+                    var b = mesh.sharedMesh.bounds;
+                    return (t.TransformPoint(b.center), t.rotation, Vector3.Scale(b.extents, scale));
+                }
+                return (c.bounds.center, Quaternion.identity, c.bounds.extents);
+            }
+            return (gi.transform.position, Quaternion.identity, Vector3.one * 0.1f);
+        }
+
+        /// <summary>
+        /// Fuel the game's "Add fuel" menu would offer: a FuelSourceItem, not tinder — unless another mod lets tinder burn
+        /// (More_Fuels_Accelerants, OtherMods). Also anything another mod made fuel (animal fat gets a FuelSourceItem).
+        /// </summary>
+        public static bool IsFuel(GearItem gi) =>
+            gi.m_FuelSourceItem != null && (!gi.m_FuelSourceItem.m_IsTinder || TinderIsFuel);
+
+        private static int tinderFrame = -1;
+        private static bool tinderIsFuel;
+
+        private static bool TinderIsFuel
+        {
+            get
+            {
+                if (tinderFrame != Time.frameCount)
+                {
+                    tinderFrame = Time.frameCount;
+                    tinderIsFuel = OtherMods.TinderIsFuel;
+                }
+                return tinderIsFuel;
+            }
+        }
+
+        /// <summary>Fuel lying loose in the world: not carried, in a container, on a cooking spot, being moved or in hands.</summary>
+        private static bool IsLooseFuel(GearItem gi, PlayerManager pm)
+        {
+            if (!IsFuel(gi)) return false;
+            if (gi.m_InPlayerInventory || gi.m_InsideContainer || !gi.gameObject.activeInHierarchy) return false;
+            if (gi.IsAttachedToPlacePoint()) return false;
+            if (pm != null && (Same(pm.m_ObjectToPlaceGearItem, gi) || Same(pm.m_ItemInHands, gi))) return false;
+            return true;
+        }
+
+        private static bool Same(GearItem a, GearItem b) => a != null && b != null && a.Pointer == b.Pointer;
+
+        private static int Units(GearItem gi) => gi.m_StackableItem != null ? gi.m_StackableItem.m_Units : 1;
+
+        // --- the game's rules (Panel_FeedFire.OnFeedFire) ---
+
+        /// <summary>The game's message if the fire can't take this piece now, else null.</summary>
+        private static string Refusal(Watched w, GearItem gi)
+        {
+            var fuel = gi.m_FuelSourceItem;
+            var fire = w.Fire;
+            bool inForge = w.Kind == FireKind.Forge;
+
+            if (fire.FireShouldBlowOutFromWind()) return Localization.Get("GAMEPLAY_TooWindyToAddFuel");
+
+            // Coal in a forge isn't limited by the longest burn time (as in the game).
+            if (!inForge || fuel.m_FireAgeMinutesBeforeAdding <= 0f)
+            {
+                float hours = fuel.GetModifiedBurnDurationHours(gi.GetNormalizedCondition());
+                float total = hours + fire.GetRemainingLifeTimeSeconds() / 3600f;
+                var manager = GameManager.GetFireManagerComponent();
+                if (manager != null && total > manager.m_MaxDurationHoursOfFire) return Localization.Get("GAMEPLAY_CannotAddMoreFuel");
+            }
+
+            int minutes = Mathf.CeilToInt(fuel.m_FireAgeMinutesBeforeAdding - fire.m_ElapsedOnTODSeconds / 60f);
+            if (minutes >= 1) return Localization.Get("GAMEPLAY_BurnTimeNeededForCoal").Replace("{minutes}", minutes.ToString());
+            return null;
+        }
+
+        /// <summary>At least one piece would go in right now (the fire takes it, not a book held back by the setting).</summary>
+        private static bool CanTakeNow(Watched w, GearItem gi) =>
+            Refusal(w, gi) == null && !(IsUnreadBook(gi) && Main.Settings.Books != BookRule.Burn);
+
+        /// <summary>
+        /// The look-alike of the item flies into the fire (FuelFlight): into a stove around its body and its open door,
+        /// straight in through the opening (StovePath); onto a campfire tossed in an arc (0.4 m over the higher end) down
+        /// into the flames; other fires in a smaller arc.
+        /// </summary>
+        private static void Pull(Watched w, GearItem gi, FirewoodBins.ExitPlan found = null)
+        {
+            var from = PointOf(gi);
+            // Out of a firewood bin: the way out found against its shape (FirewoodBins.Exit; already found by auto-feed).
+            var (centre, rotation, half) = BoxOf(gi);
+            var exit = found ?? (FirewoodBins.InBin(from) ? FirewoodBins.ExitPath(centre, rotation, half, TowardOf(w)) : null);
+            if (exit?.Points != null && exit.Points.Count > 0) from = exit.Points[exit.Points.Count - 1];
+            // The look-alike turns as the item's box turns on the way out of the bin.
+            var turnTo = exit != null && exit.TurnPoints > 0 ? exit.Rotation * Quaternion.Inverse(rotation) * gi.transform.rotation : (Quaternion?)null;
+            if (w.Funnel != null && w.Funnel.IsCone)
+            {
+                // Through the door: its last two legs (up to the door and inside) go into the stove itself.
+                Fly(gi, w, exit, turnTo, StovePath(w.Funnel, from), 2);
+                return;
+            }
+            if (FireZone.IsBarrel(w.Fi))
+            {
+                Fly(gi, w, exit, turnTo, BarrelPath(w.Fi.transform, from), 2);
+                return;
+            }
+            if (w.Kind == FireKind.Campfire)
+            {
+                var flames = w.Zone.Frame.position + Vector3.up * 0.25f;
+                var via = (from + flames) / 2f;
+                via.y = Math.Max(from.y, flames.y) + 0.4f;
+                Fly(gi, w, exit, turnTo, new List<Vector3> { via, flames }, 1);
+                return;
+            }
+            var to = w.Zone.Center;
+            Fly(gi, w, exit, turnTo, new List<Vector3> { (from + to) / 2f + Vector3.up * 0.3f, to }, 1);
+        }
+
+        /// <summary>Where fuel flies to in this fire (its funnel, else its zone): what a way out of a bin heads for.</summary>
+        private static Vector3 TowardOf(Watched w) => w.Funnel != null ? w.Funnel.Center : w.Zone.Center;
+
+        /// <summary>
+        /// The flight: out of a firewood bin first when the fuel lies in one, then the path into the fire, around anything
+        /// in the way except its own bin, the fire's door leaf and the last <paramref name="freeEnd"/> legs (into the fire).
+        /// </summary>
+        private static void Fly(GearItem gi, Watched w, FirewoodBins.ExitPlan exit, Quaternion? turnTo, List<Vector3> path, int freeEnd)
+        {
+            var all = new List<Vector3>();
+            int exitPoints = exit?.Points?.Count ?? 0;
+            if (exitPoints > 0) all.AddRange(exit.Points);
+            all.AddRange(path);
+            var anim = w.Stove != null ? w.Stove.m_ObjectAnim : null;
+            var doorLeaf = anim != null && anim.m_Target != null ? anim.m_Target.transform : null;
+            // The "add fuel" sound plays when it lands (FuelFlight), not when the fire takes it now (Feed, this frame).
+            if (FuelFlight.Start(gi, all, Main.Settings.PullSpeed, w.Stove != null ? w.Stove.Pointer : IntPtr.Zero, w.Fi.gameObject,
+                    freeEnd, exitPoints, turnTo, turnTo.HasValue ? exit.TurnPoints : 0, FirewoodBins.RootOf(PointOf(gi)), doorLeaf))
+                soundOnArrivalFrame = Time.frameCount;
+        }
+
+        /// <summary>Set when a look-alike flies in this frame: the pieces fed now make no sound, the landing does.</summary>
+        private static int soundOnArrivalFrame = -1;
+
+        /// <summary>The game's "add fuel" sound at the fire, once per 0.2 s (a whole stack going in sounds once).</summary>
+        public static void FeedSound(GameObject at)
+        {
+            if (at == null || Time.time - lastSound <= 0.2f) return;
+            if (!InterfaceManager.TryGetPanel<Panel_FeedFire>(out var feed) || feed == null || string.IsNullOrEmpty(feed.m_FeedFireAudio)) return;
+            GameAudioManager.PlaySound(feed.m_FeedFireAudio, at);
+            lastSound = Time.time;
+        }
+
+        /// <summary>
+        /// Into a fire barrel from above, tossed: up over the rim on the fuel's side, then down inside it near the wall,
+        /// clear of the cooking spots around the middle of the grill (F6: within 0.15 m of the centre).
+        /// </summary>
+        private static List<Vector3> BarrelPath(Transform barrel, Vector3 from)
+        {
+            var centre = barrel.position;
+            var side = new Vector3(from.x - centre.x, 0f, from.z - centre.z);
+            side = side.sqrMagnitude > 0.0001f ? side.normalized : barrel.forward;
+            var up = Vector3.up;
+            return new List<Vector3>
+            {
+                centre + side * 0.45f + up * (FireZone.BarrelRim + 0.35f),     // over the rim, outside
+                centre + side * 0.27f + up * (FireZone.BarrelRim + 0.15f),     // above the opening, by the wall
+                centre + side * 0.22f + up * 0.55f,                            // down into the fire
+            };
+        }
+
+        // Stove path, in the stove's frame from the door (the funnel's apex), forward = away from the stove:
+        private const float StepOut = 0.7f;     // fuel beside or close to the stove first moves out this far in front
+        private const float LineUp = 0.35f;     // then lines up with the door this far in front of it
+        private const float Inside = 0.3f;      // and ends this far inside, past the opening
+
+        /// <summary>
+        /// Into a stove without touching it: fuel beside or close to the stove first moves out in front (and a little up),
+        /// clear of the body and of the open door (it swings to the side and a bit back), then lines up with the door on
+        /// its axis at door height, goes through the opening and ends inside the firebox.
+        /// </summary>
+        private static List<Vector3> StovePath(FireZone funnel, Vector3 from)
+        {
+            var yaw = funnel.Yaw;
+            var origin = funnel.Frame.position;
+            var door = funnel.Offset;                                   // local: (0, 0.74, -0.25) on the pot belly
+            var forward = new Vector3(funnel.Axis.x, 0f, funnel.Axis.z).normalized;
+            Vector3 World(Vector3 local) => origin + yaw * local;
+
+            var start = funnel.Local(from);
+            var path = new List<Vector3>();
+            // How far in front of the door the fuel is, and how far off its axis.
+            float ahead = Vector3.Dot(start - door, forward);
+            var side = Vector3.Cross(Vector3.up, forward);
+            float off = Vector3.Dot(start - door, side);
+            if (ahead < StepOut || Math.Abs(off) > 0.25f)
+            {
+                var stepped = start + forward * Math.Max(0f, StepOut - ahead);
+                stepped.y = Math.Max(start.y, door.y - 0.2f);
+                path.Add(World(stepped));
+            }
+            path.Add(World(door + forward * LineUp));
+            path.Add(World(door));
+            path.Add(World(door - forward * Inside));
+            return path;
+        }
+
+        private static bool IsUnreadBook(GearItem gi)
+        {
+            var book = gi.m_ResearchItem;
+            return book != null && book.m_ElapsedHours < book.GetTimeRequirementHoursPrecise();
+        }
+
+        private static void Tell(string message)
+        {
+            if (Main.Settings.messages) HUDMessage.AddMessage(message, false, false);
+        }
+
+        private static void AskAboutBook(Watched w, GearItem gi, bool held)
+        {
+            if (!w.Asked.Add(gi.Pointer)) return; // asked already; put it in again to be asked again
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out var panel) || panel == null) return;
+            Action confirmed = () =>
+            {
+                try
+                {
+                    // Still burning, and (if it was lying) still there?
+                    if (gi == null || w.Fi == null || !w.Burning) return;
+                    // A book held over the fire went back to where it came from: burn it from there.
+                    if (!held && (!IsLooseFuel(gi, GameManager.GetPlayerManagerComponent()) || !w.Zone.Contains(PointOf(gi)))) return;
+                    if (Refusal(w, gi) is string refusal) Tell(refusal);
+                    else Feed(w, gi);
+                }
+                catch (Exception e)
+                {
+                    Once.Warn("book", "Burning the book failed: " + e);
+                }
+            };
+            panel.ShowBurnResearchNotification(DelegateSupport.ConvertDelegate<Panel_Confirmation.CallbackDelegate>(confirmed));
+            Verbose.Log($"Asked about burning the unread book {gi.name}");
+        }
+
+        private static float lastSound = -1f;
+
+        /// <summary>One piece into the fire, used up like from the game's menu.</summary>
+        private static void Feed(Watched w, GearItem gi)
+        {
+            // Flying in: the sound comes when it lands in the fire, not now.
+            if (soundOnArrivalFrame != Time.frameCount) FeedSound(w.Fi.gameObject);
+
+            w.Fire.AddFuel(gi, w.Kind == FireKind.Forge);
+
+            int units = Units(gi);
+            bool carried = gi.m_InPlayerInventory;
+            Verbose.Log($"{gi.name} went into the {w.Kind} '{w.Fi.gameObject.name}' ({units} piece(s), {(carried ? "carried" : "in the world")}); " +
+                        $"fire now {w.Fire.GetRemainingLifeTimeHours():0.00} h");
+            if (carried) GameManager.GetPlayerManagerComponent().ConsumeUnitFromInventory(gi.gameObject);
+            else if (units > 1) gi.m_StackableItem.m_Units = units - 1;
+            else GearManager.DestroyGearObject(gi);
+        }
+    }
 }

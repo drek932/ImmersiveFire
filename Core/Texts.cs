@@ -1,97 +1,163 @@
 using System.Collections.Generic;
 
-namespace ImmersiveFire;
-
-internal static class Texts
+namespace ImmersiveFire
 {
-	public static readonly Dictionary<string, (string ru, string en)> All = new Dictionary<string, (string, string)>
-	{
-		["SECTION_FIRES"] = ("Огни", "Fires"),
-		["CAMPFIRES"] = ("Костры", "Campfires"),
-		["CAMPFIRES_DESC"] = ("Да — топливо, положенное внутрь кольца камней горящего костра, сгорает, как будто вы подбросили его через меню.", "Yes — fuel put inside the stone ring of a burning campfire burns, as if you added it from the menu."),
-		["FIREPLACES"] = ("Камины и очаги", "Fireplaces"),
-		["FIREPLACES_DESC"] = ("Да — топливо, положенное в горящий камин или открытый очаг, сгорает.", "Yes — fuel put into a burning fireplace or open hearth burns."),
-		["STOVES"] = ("Печки и бочки", "Stoves and barrels"),
-		["STOVES_DESC"] = ("Да — топливо, положенное к огню горящей печки или бочки, сгорает. Предметы на плите и на местах для готовки не трогаются.", "Yes — fuel put to the fire of a burning stove or barrel burns. Items on the stove top and on cooking spots are left alone."),
-		["SECTION_ZONES"] = ("Зоны", "Zones"),
-		["CAMPFIRE_ZONES"] = ("Зоны костра", "Campfire zones"),
-		["CAMPFIRE_ZONES_DESC"] = ("Насколько больше обычного обе зоны костра: внутри камней (там сгорает положенное топливо) и шар вокруг, из которого костёр затягивает топливо, которое вы несёте или бросаете.", "How much bigger than the base both campfire zones are: inside the stones (fuel put there burns) and the ball around it, from which the campfire draws in fuel you carry or throw."),
-		["STOVE_ZONES"] = ("Зоны печки", "Stove zones"),
-		["STOVE_ZONES_DESC"] = ("Насколько больше обычного зоны печки: топка у дверцы и область, в которой дверца открывается навстречу топливу. Воронка настраивается отдельно.", "How much bigger than the base the stove zones are: the firebox at the door and the area where the door opens for fuel coming near. The funnel has its own setting."),
-		["MORE_5"] = ("На 5% больше", "5% bigger"),
-		["MORE_15"] = ("На 15% больше", "15% bigger"),
-		["MORE_25"] = ("На 25% больше", "25% bigger"),
-		["FORGES"] = ("Горн", "Forge"),
-		["FORGES_DESC"] = ("Да — топливо, положенное в горящий горн, сгорает по правилам горна.", "Yes — fuel put into a burning forge burns, following the forge's rules."),
-		["SECTION_RULES"] = ("Правила", "Rules"),
-		["BOOKS"] = ("Непрочитанные книги навыков", "Unread skill books"),
-		["BOOKS_DESC"] = ("Что делать с книгой навыка, которую вы ещё не дочитали. Прочитанные книги горят как обычное топливо.", "What to do with a skill book you haven't finished reading. Books already read burn like any other fuel."),
-		["BOOKS_ASK"] = ("Спрашивать (как в игре)", "Ask (like the game)"),
-		["BOOKS_NEVER"] = ("Не сжигать", "Never burn"),
-		["BOOKS_BURN"] = ("Сжигать", "Burn"),
-		["MESSAGES"] = ("Сообщения", "Messages"),
-		["MESSAGES_DESC"] = ("Да — если огонь не может принять топливо (ветер, огонь и так горит долго, уголь класть рано), показывается то же сообщение, что и в меню игры. Топливо остаётся лежать и сгорит, когда станет можно.", "Yes — when the fire can't take the fuel (wind, the fire already burns long enough, too early for coal), the game's own message is shown. The fuel stays where it lies and burns once it can."),
-		["FUNNEL_SIZE"] = ("Воронка печки", "Stove funnel"),
-		["FUNNEL_SIZE_DESC"] = ("Насколько больше обычного область перед дверцей печки, откуда топливо с пола затягивается внутрь.", "How much bigger than the base the area in front of a stove door is, from which fuel is drawn in off the floor."),
-		["MORE_0"] = ("Обычная", "Base"),
-		["MORE_10"] = ("На 10% больше", "10% bigger"),
-		["MORE_20"] = ("На 20% больше", "20% bigger"),
-		["MORE_30"] = ("На 30% больше", "30% bigger"),
-		["MORE_40"] = ("На 40% больше", "40% bigger"),
-		["MORE_50"] = ("На 50% больше", "50% bigger"),
-		["PULL_SPEED"] = ("Скорость затягивания", "Pull animation speed"),
-		["PULL_SPEED_DESC"] = ("Насколько медленнее обычного топливо летит в огонь (костёр, печку), когда огонь его затягивает. Обычная — 0,3 с.", "How much slower than the base the fuel flies into a fire (campfire, stove) when the fire draws it in. Base: 0.3 s."),
-		["SLOWER_10"] = ("На 10% медленнее", "10% slower"),
-		["SLOWER_20"] = ("На 20% медленнее", "20% slower"),
-		["SLOWER_30"] = ("На 30% медленнее", "30% slower"),
-		["SLOWER_40"] = ("На 40% медленнее", "40% slower"),
-		["SLOWER_50"] = ("На 50% медленнее", "50% slower"),
-		["FASTER_0"] = ("Обычная", "Base"),
-		["DOOR_CLOSE"] = ("Пауза перед закрытием дверцы", "Wait before a door closes"),
-		["DOOR_CLOSE_DESC"] = ("Насколько короче обычного (1,5 с) пауза, после которой дверца печки закрывается, когда топливо унесли.", "How much shorter than the base (1.5 s) the wait is before a stove door closes once the fuel is gone."),
-		["SHORTER_30"] = ("На 30% короче", "30% shorter"),
-		["SHORTER_40"] = ("На 40% короче", "40% shorter"),
-		["SHORTER_50"] = ("На 50% короче", "50% shorter"),
-		["SHORTER_60"] = ("На 60% короче", "60% shorter"),
-		["SHORTER_70"] = ("На 70% короче", "70% shorter"),
-		["DOOR_TURN"] = ("Скорость закрытия дверцы", "Door closing speed"),
-		["DOOR_TURN_DESC"] = ("Насколько медленнее обычного (0,3 с) дверца поворачивается, закрываясь. Для всех печей.", "How much slower than the base (0.3 s) the door turns when it closes. Every stove."),
-		["SLOWER_60"] = ("На 60% медленнее", "60% slower"),
-		["SLOWER_70"] = ("На 70% медленнее", "70% slower"),
-		["SLOWER_80"] = ("На 80% медленнее", "80% slower"),
-		["SLOWER_90"] = ("На 90% медленнее", "90% slower"),
-		["SLOWER_100"] = ("Вдвое медленнее", "Twice as slow"),
-		["SECTION_AUTO"] = ("Автоподача", "Auto-feed"),
-		["MODE"] = ("Режим", "Mode"),
-		["MODE_DESC"] = ("Затягивание — огонь забирает топливо, которое вы несёте, бросаете или кладёте в него. Автоподача — огонь сам берёт топливо, лежащее в его зонах, когда она включена в его меню. «Только автоподача»: топливо можно спокойно разложить у огня про запас.", "Pull — the fire takes fuel you carry, throw or put into it. Auto-feed — the fire takes fuel lying in its zones by itself, when switched on in its menu. \"Auto-feed only\": fuel can be laid out next to the fire as a stock."),
-		["MODE_BOTH"] = ("Затягивание и автоподача", "Pull and auto-feed"),
-		["MODE_PULL"] = ("Только затягивание", "Pull only"),
-		["MODE_AUTO"] = ("Только автоподача", "Auto-feed only"),
-		["AUTO_REPLACE"] = ("Кнопка вместо «Добавить топливо»", "Button instead of \"Add fuel\""),
-		["AUTO_REPLACE_DESC"] = ("Для печей, бочек и горнов. Да — в меню огня кнопка «Автоподача» стоит вместо «Добавить топливо» (топливо подкидывается руками, перенося его к огню). Нет — кнопка появляется рядом.", "For stoves, barrels and forges. Yes — the fire menu's \"Auto-feed\" button takes the place of \"Add fuel\" (fuel is put in by carrying it to the fire). No — the button is added next to it."),
-		["AUTO_REPLACE_CAMPFIRE"] = ("    То же для костра", "    The same for campfires"),
-		["AUTO_REPLACE_CAMPFIRE_DESC"] = ("Да — у костра «Автоподача» стоит вместо «Добавить топливо». Нет — рядом.", "Yes — at a campfire \"Auto-feed\" takes the place of \"Add fuel\". No — it is added next to it."),
-		["AUTO_KEY"] = ("Клавиша выбора времени", "Key for the time choice"),
-		["AUTO_KEY_DESC"] = ("Пока клавиша зажата, в меню огня видны варианты: подбрасывать, когда горения осталось меньше 15, 30 или 60 минут. Огонь сам берёт топливо, лежащее в его зонах.", "While held, the fire menu shows the choices: add fuel when less than 15, 30 or 60 minutes of burning are left. The fire takes fuel lying in its own zones."),
-		["AUTO_OFF"] = ("Автоподача: выкл", "Auto-feed: off"),
-		["AUTO_ON"] = ("Автоподача", "Auto-feed"),
-		["AUTO_15"] = ("Автоподача: 15 мин", "Auto-feed: 15 min"),
-		["AUTO_30"] = ("Автоподача: 30 мин", "Auto-feed: 30 min"),
-		["AUTO_60"] = ("Автоподача: 60 мин", "Auto-feed: 60 min"),
-		["MIN_15"] = ("15 мин", "15 min"),
-		["MIN_30"] = ("30 мин", "30 min"),
-		["MIN_60"] = ("60 мин", "60 min"),
-		["BIN_NAME"] = ("Ящик для дров", "Firewood bin"),
-		["BIN_DESC"] = ("Большой деревянный ящик для дров с откидной крышкой. Огонь рядом, если у него включена автоподача, берёт топливо отсюда.", "A large wooden firewood bin with a hinged lid. A fire nearby with auto-feed on takes its fuel from here."),
-		["BIN_OPEN"] = ("Открыть крышку", "Open the lid"),
-		["BIN_CLOSE"] = ("Закрыть крышку", "Close the lid"),
-		["SECTION_LOOK"] = ("Анимация и вид", "Animation and look"),
-		["HIDE_OUTLINE"] = ("Подсветка у огня", "Highlight near a fire"),
-		["HIDE_OUTLINE_DESC"] = ("Когда рядом есть огонь (костёр, печка, камин, горн), переносимый предмет можно не подсвечивать зелёным или красным: топливо в огонь кладётся естественно. Топливо — то, что может продлить горение (с учётом других модов, например трут из More Fuels). Куда предмет можно поставить, игра проверяет как обычно.", "When a fire is near (campfire, stove, fireplace, forge), the item being moved may go without the green or red highlight, so putting fuel in looks natural. Fuel = what can make a fire burn longer (other mods included, e.g. tinder with More Fuels). Where it may be put down is still checked as usual."),
-		["OUTLINE_OFF"] = ("Как в игре", "As in the game"),
-		["OUTLINE_FUEL"] = ("Без подсветки у топлива", "None for fuel"),
-		["OUTLINE_ALL"] = ("Без подсветки у всего", "None for any item"),
-		["OUTLINE_DISTANCE"] = ("    Расстояние до огня (м)", "    Distance to the fire (m)"),
-		["OUTLINE_DISTANCE_DESC"] = ("В пределах какого расстояния от огня подсветка скрывается.", "How close to a fire the highlight is hidden.")
-	};
+    /// <summary>All texts of the mod, Russian and English. Keys are used in Settings.cs with the "IMFI_" prefix.</summary>
+    internal static class Texts
+    {
+        /// <summary>Key -> (Russian, English).</summary>
+        public static readonly Dictionary<string, (string ru, string en)> All = new()
+        {
+            ["SECTION_FIRES"] = ("Огни", "Fires"),
+            ["CAMPFIRES"] = ("Костры", "Campfires"),
+            ["CAMPFIRES_DESC"] = (
+                "Да — топливо, положенное внутрь кольца камней горящего костра, сгорает, как будто вы подбросили его через меню.",
+                "Yes — fuel put inside the stone ring of a burning campfire burns, as if you added it from the menu."),
+            ["FIREPLACES"] = ("Камины и очаги", "Fireplaces"),
+            ["FIREPLACES_DESC"] = (
+                "Да — топливо, положенное в горящий камин или открытый очаг, сгорает.",
+                "Yes — fuel put into a burning fireplace or open hearth burns."),
+            ["STOVES"] = ("Печки и бочки", "Stoves and barrels"),
+            ["STOVES_DESC"] = (
+                "Да — топливо, положенное к огню горящей печки или бочки, сгорает. Предметы на плите и на местах для готовки не трогаются.",
+                "Yes — fuel put to the fire of a burning stove or barrel burns. Items on the stove top and on cooking spots are left alone."),
+            ["SECTION_ZONES"] = ("Зоны", "Zones"),
+            ["CAMPFIRE_ZONES"] = ("Зоны костра", "Campfire zones"),
+            ["CAMPFIRE_ZONES_DESC"] = (
+                "Насколько больше обычного обе зоны костра: внутри камней (там сгорает положенное топливо) и шар вокруг, " +
+                "из которого костёр затягивает топливо, которое вы несёте или бросаете.",
+                "How much bigger than the base both campfire zones are: inside the stones (fuel put there burns) and the ball " +
+                "around it, from which the campfire draws in fuel you carry or throw."),
+            ["STOVE_ZONES"] = ("Зоны печки", "Stove zones"),
+            ["STOVE_ZONES_DESC"] = (
+                "Насколько больше обычного зоны печки: топка у дверцы и область, в которой дверца открывается навстречу " +
+                "топливу. Воронка настраивается отдельно.",
+                "How much bigger than the base the stove zones are: the firebox at the door and the area where the door opens " +
+                "for fuel coming near. The funnel has its own setting."),
+            ["MORE_5"] = ("На 5% больше", "5% bigger"),
+            ["MORE_15"] = ("На 15% больше", "15% bigger"),
+            ["MORE_25"] = ("На 25% больше", "25% bigger"),
+            ["FORGES"] = ("Горн", "Forge"),
+            ["FORGES_DESC"] = (
+                "Да — топливо, положенное в горящий горн, сгорает по правилам горна.",
+                "Yes — fuel put into a burning forge burns, following the forge's rules."),
+
+            ["SECTION_RULES"] = ("Правила", "Rules"),
+            ["BOOKS"] = ("Непрочитанные книги навыков", "Unread skill books"),
+            ["BOOKS_DESC"] = (
+                "Что делать с книгой навыка, которую вы ещё не дочитали. Прочитанные книги горят как обычное топливо.",
+                "What to do with a skill book you haven't finished reading. Books already read burn like any other fuel."),
+            ["BOOKS_ASK"] = ("Спрашивать (как в игре)", "Ask (like the game)"),
+            ["BOOKS_NEVER"] = ("Не сжигать", "Never burn"),
+            ["BOOKS_BURN"] = ("Сжигать", "Burn"),
+            ["MESSAGES"] = ("Сообщения", "Messages"),
+            ["MESSAGES_DESC"] = (
+                "Да — если огонь не может принять топливо (ветер, огонь и так горит долго, уголь класть рано), " +
+                "показывается то же сообщение, что и в меню игры. Топливо остаётся лежать и сгорит, когда станет можно.",
+                "Yes — when the fire can't take the fuel (wind, the fire already burns long enough, too early for coal), " +
+                "the game's own message is shown. The fuel stays where it lies and burns once it can."),
+            ["FUNNEL_SIZE"] = ("Воронка печки", "Stove funnel"),
+            ["FUNNEL_SIZE_DESC"] = (
+                "Насколько больше обычного область перед дверцей печки, откуда топливо с пола затягивается внутрь.",
+                "How much bigger than the base the area in front of a stove door is, from which fuel is drawn in off the floor."),
+            ["MORE_0"] = ("Обычная", "Base"),
+            ["MORE_10"] = ("На 10% больше", "10% bigger"),
+            ["MORE_20"] = ("На 20% больше", "20% bigger"),
+            ["MORE_30"] = ("На 30% больше", "30% bigger"),
+            ["MORE_40"] = ("На 40% больше", "40% bigger"),
+            ["MORE_50"] = ("На 50% больше", "50% bigger"),
+            ["PULL_SPEED"] = ("Скорость затягивания", "Pull animation speed"),
+            ["PULL_SPEED_DESC"] = (
+                "Насколько медленнее обычного топливо летит в огонь (костёр, печку), когда огонь его затягивает. Обычная — 0,3 с.",
+                "How much slower than the base the fuel flies into a fire (campfire, stove) when the fire draws it in. Base: 0.3 s."),
+            ["SLOWER_10"] = ("На 10% медленнее", "10% slower"),
+            ["SLOWER_20"] = ("На 20% медленнее", "20% slower"),
+            ["SLOWER_30"] = ("На 30% медленнее", "30% slower"),
+            ["SLOWER_40"] = ("На 40% медленнее", "40% slower"),
+            ["SLOWER_50"] = ("На 50% медленнее", "50% slower"),
+            ["FASTER_0"] = ("Обычная", "Base"),
+            ["DOOR_CLOSE"] = ("Пауза перед закрытием дверцы", "Wait before a door closes"),
+            ["DOOR_CLOSE_DESC"] = (
+                "Насколько короче обычного (1,5 с) пауза, после которой дверца печки закрывается, когда топливо унесли.",
+                "How much shorter than the base (1.5 s) the wait is before a stove door closes once the fuel is gone."),
+            ["SHORTER_30"] = ("На 30% короче", "30% shorter"),
+            ["SHORTER_40"] = ("На 40% короче", "40% shorter"),
+            ["SHORTER_50"] = ("На 50% короче", "50% shorter"),
+            ["SHORTER_60"] = ("На 60% короче", "60% shorter"),
+            ["SHORTER_70"] = ("На 70% короче", "70% shorter"),
+            ["DOOR_TURN"] = ("Скорость закрытия дверцы", "Door closing speed"),
+            ["DOOR_TURN_DESC"] = (
+                "Насколько медленнее обычного (0,3 с) дверца поворачивается, закрываясь. Для всех печей.",
+                "How much slower than the base (0.3 s) the door turns when it closes. Every stove."),
+            ["SLOWER_60"] = ("На 60% медленнее", "60% slower"),
+            ["SLOWER_70"] = ("На 70% медленнее", "70% slower"),
+            ["SLOWER_80"] = ("На 80% медленнее", "80% slower"),
+            ["SLOWER_90"] = ("На 90% медленнее", "90% slower"),
+            ["SLOWER_100"] = ("Вдвое медленнее", "Twice as slow"),
+
+            ["SECTION_AUTO"] = ("Автоподача", "Auto-feed"),
+            ["MODE"] = ("Режим", "Mode"),
+            ["MODE_DESC"] = (
+                "Затягивание — огонь забирает топливо, которое вы несёте, бросаете или кладёте в него. " +
+                "Автоподача — огонь сам берёт топливо, лежащее в его зонах, когда она включена в его меню. " +
+                "«Только автоподача»: топливо можно спокойно разложить у огня про запас.",
+                "Pull — the fire takes fuel you carry, throw or put into it. " +
+                "Auto-feed — the fire takes fuel lying in its zones by itself, when switched on in its menu. " +
+                "\"Auto-feed only\": fuel can be laid out next to the fire as a stock."),
+            ["MODE_BOTH"] = ("Затягивание и автоподача", "Pull and auto-feed"),
+            ["MODE_PULL"] = ("Только затягивание", "Pull only"),
+            ["MODE_AUTO"] = ("Только автоподача", "Auto-feed only"),
+            ["AUTO_REPLACE"] = ("Кнопка вместо «Добавить топливо»", "Button instead of \"Add fuel\""),
+            ["AUTO_REPLACE_DESC"] = (
+                "Для печей, бочек и горнов. Да — в меню огня кнопка «Автоподача» стоит вместо «Добавить топливо» (топливо " +
+                "подкидывается руками, перенося его к огню). Нет — кнопка появляется рядом.",
+                "For stoves, barrels and forges. Yes — the fire menu's \"Auto-feed\" button takes the place of \"Add fuel\" " +
+                "(fuel is put in by carrying it to the fire). No — the button is added next to it."),
+            ["AUTO_REPLACE_CAMPFIRE"] = ("    То же для костра", "    The same for campfires"),
+            ["AUTO_REPLACE_CAMPFIRE_DESC"] = (
+                "Да — у костра «Автоподача» стоит вместо «Добавить топливо». Нет — рядом.",
+                "Yes — at a campfire \"Auto-feed\" takes the place of \"Add fuel\". No — it is added next to it."),
+            ["AUTO_KEY"] = ("Клавиша выбора времени", "Key for the time choice"),
+            ["AUTO_KEY_DESC"] = (
+                "Пока клавиша зажата, в меню огня видны варианты: подбрасывать, когда горения осталось меньше 15, 30 или 60 минут. " +
+                "Огонь сам берёт топливо, лежащее в его зонах.",
+                "While held, the fire menu shows the choices: add fuel when less than 15, 30 or 60 minutes of burning are left. " +
+                "The fire takes fuel lying in its own zones."),
+            ["AUTO_OFF"] = ("Автоподача: выкл", "Auto-feed: off"),
+            ["AUTO_ON"] = ("Автоподача", "Auto-feed"),
+            ["PULL_ON"] = ("Затягивание", "Pulling in"),
+            ["PULL_OFF"] = ("Затягивание: выкл", "Pulling in: off"),
+            ["PULL_ON_MSG"] = ("Огонь затягивает топливо", "The fire pulls fuel in"),
+            ["PULL_OFF_MSG"] = ("Огонь не затягивает топливо", "The fire doesn't pull fuel in"),
+            ["AUTO_15"] = ("Автоподача: 15 мин", "Auto-feed: 15 min"),
+            ["AUTO_30"] = ("Автоподача: 30 мин", "Auto-feed: 30 min"),
+            ["AUTO_60"] = ("Автоподача: 60 мин", "Auto-feed: 60 min"),
+            ["MIN_15"] = ("15 мин", "15 min"),
+            ["MIN_30"] = ("30 мин", "30 min"),
+            ["MIN_60"] = ("60 мин", "60 min"),
+
+            ["BIN_NAME"] = ("Ящик для дров", "Firewood bin"),
+            ["BIN_DESC"] = ("Большой деревянный ящик для дров с откидной крышкой. Огонь рядом, если у него включена автоподача, берёт топливо отсюда.",
+                            "A large wooden firewood bin with a hinged lid. A fire nearby with auto-feed on takes its fuel from here."),
+            ["BIN_OPEN"] = ("Открыть крышку", "Open the lid"),
+            ["BIN_CLOSE"] = ("Закрыть крышку", "Close the lid"),
+
+            ["SECTION_LOOK"] = ("Анимация и вид", "Animation and look"),
+            ["HIDE_OUTLINE"] = ("Подсветка у огня", "Highlight near a fire"),
+            ["HIDE_OUTLINE_DESC"] = (
+                "Когда рядом есть огонь (костёр, печка, камин, горн), переносимый предмет можно не подсвечивать зелёным или " +
+                "красным: топливо в огонь кладётся естественно. Топливо — то, что может продлить горение (с учётом других " +
+                "модов, например трут из More Fuels). Куда предмет можно поставить, игра проверяет как обычно.",
+                "When a fire is near (campfire, stove, fireplace, forge), the item being moved may go without the green or red " +
+                "highlight, so putting fuel in looks natural. Fuel = what can make a fire burn longer (other mods included, " +
+                "e.g. tinder with More Fuels). Where it may be put down is still checked as usual."),
+            ["OUTLINE_OFF"] = ("Как в игре", "As in the game"),
+            ["OUTLINE_FUEL"] = ("Без подсветки у топлива", "None for fuel"),
+            ["OUTLINE_ALL"] = ("Без подсветки у всего", "None for any item"),
+            ["OUTLINE_DISTANCE"] = ("    Расстояние до огня (м)", "    Distance to the fire (m)"),
+            ["OUTLINE_DISTANCE_DESC"] = (
+                "В пределах какого расстояния от огня подсветка скрывается.",
+                "How close to a fire the highlight is hidden."),
+        };
+    }
 }
