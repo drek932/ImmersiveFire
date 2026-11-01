@@ -561,7 +561,7 @@ namespace ImmersiveFire
                 if (bp.name == OurBlueprint) return; // there already
                 if (bp.name == SourceBlueprint) source = bp;
             }
-            var softwood = GearItem.LoadGearItemPrefab("GEAR_Softwood");
+            var softwood = SoftwoodPrefab(all);
             var furniture = Template();
             if (source == null || softwood == null || furniture == null)
             {
@@ -588,14 +588,36 @@ namespace ImmersiveFire
             ours.m_Locked = false;
             ours._Locked_k__BackingField = false;
             all.Add(ours);
-            // Also among the game's own (addressable) recipes: CraftCategories counts every other recipe as a mod's and shows
-            // those only in its own category ("Other mods"), not with the furniture.
-            manager.m_AddressableBlueprints?.Add(ours);
             if (manager.m_UnlockedBlueprints != null && !manager.m_UnlockedBlueprints.Contains(OurBlueprint))
                 manager.m_UnlockedBlueprints.Add(OurBlueprint);
             Main.Log.Msg($"[Bin] Blueprint added: {Softwood} x GEAR_Softwood at {ours.m_RequiredCraftingLocation}, " +
                          $"{ours.m_DurationMinutes} min, tool {(ours.m_RequiredTool != null ? ours.m_RequiredTool.name : "none")}, " +
                          $"result '{furniture.name}'");
+        }
+
+        /// <summary>
+        /// The softwood item (prefab) a recipe asks for: taken from a game recipe that already asks for it, else loaded by its
+        /// name (game 2.58 has no GearItem.LoadGearItemPrefab any more).
+        /// </summary>
+        private static GearItem SoftwoodPrefab(Il2CppSystem.Collections.Generic.List<BlueprintData> all)
+        {
+            for (int i = 0; i < all.Count; i++)
+            {
+                var required = all[i]?.m_RequiredGear;
+                if (required == null) continue;
+                foreach (var r in required)
+                    if (r?.m_Item != null && r.m_Item.name == "GEAR_Softwood") return r.m_Item;
+            }
+            try
+            {
+                var go = AssetHelper.SafeLoadAssetAsync<GameObject>("GEAR_Softwood", false).WaitForCompletion();
+                return go != null ? go.GetComponent<GearItem>() : null;
+            }
+            catch (Exception e)
+            {
+                Main.Log.Warning("[Bin] Loading GEAR_Softwood: " + e.Message);
+                return null;
+            }
         }
 
         private static bool IsOurs(BlueprintData bp) => bp != null && bp.name == OurBlueprint;

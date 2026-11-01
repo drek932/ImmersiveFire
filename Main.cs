@@ -3,7 +3,7 @@ using Il2Cpp;
 using MelonLoader;
 using ImmersiveShared;
 
-[assembly: MelonInfo(typeof(ImmersiveFire.Main), "ImmersiveFire", "1.1.0", "drek932")]
+[assembly: MelonInfo(typeof(ImmersiveFire.Main), "ImmersiveFire", "1.1.1", "drek932")]
 [assembly: MelonGame("Hinterland", "TheLongDark")]
 
 namespace ImmersiveFire
