@@ -1,4 +1,5 @@
-<img width="1515" height="717" alt="image" src="https://github.com/user-attachments/assets/62e72bb5-7dac-4075-ae8d-5f8632246d2d" />
+<img width="1372" height="640" alt="image" src="https://github.com/user-attachments/assets/3dbd4420-7d31-49f2-81fc-c3f795137f00" />
+
 
 Video demonstration: https://youtu.be/w9cZ38eyTlU
 
