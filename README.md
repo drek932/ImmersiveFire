@@ -1,3 +1,4 @@
+<img width="1522" height="716" alt="image" src="https://github.com/user-attachments/assets/82ed0119-739c-40b7-9783-189569703c0c" />
 # Immersive Fire
 
 **Feed the fire by hand — no menu, no progress bar.**
