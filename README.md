@@ -1,5 +1,7 @@
 <img width="1515" height="717" alt="image" src="https://github.com/user-attachments/assets/62e72bb5-7dac-4075-ae8d-5f8632246d2d" />
 
+Video demonstration: https://youtu.be/w9cZ38eyTlU
+
 # Immersive Fire
 
 **Feed the fire by hand — no menu, no progress bar.**
